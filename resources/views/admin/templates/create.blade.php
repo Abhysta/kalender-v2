@@ -39,6 +39,7 @@
 
         <div>
             <label class="block text-[12px] font-semibold text-slate-700 mb-1.5">Unit Organisasi</label>
+            @if(Auth::user()->hasRole('super_admin'))
             <select name="organizational_unit_id"
                 class="w-full h-10 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-3 text-sm text-slate-900 outline-none transition-all focus:border-sky-700 focus:bg-white select-custom">
                 <option value="">— Semua Unit —</option>
@@ -48,6 +49,12 @@
                 </option>
                 @endforeach
             </select>
+            @else
+            <input type="hidden" name="organizational_unit_id" value="{{ Auth::user()->organizational_unit_id }}">
+            <div class="w-full h-10 bg-slate-100 border-[1.5px] border-slate-200 rounded-lg px-3 text-sm text-slate-500 flex items-center cursor-not-allowed">
+                {{ Auth::user()->organizationalUnit?->name ?? '—' }}
+            </div>
+            @endif
         </div>
 
         <div>

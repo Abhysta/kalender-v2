@@ -18,8 +18,9 @@ class DatabaseSeeder extends Seeder
         $this->call(RolesAndPermissionsSeeder::class);
 
         $user = User::factory()->create([
-            'name'                   => 'Test User',
-            'email'                  => 'test@example.com',
+            'name'                   => 'Super Admin',
+            'email'                  => 'admin@bpsdm.go.id',
+            'password'               => bcrypt('admin123'),
             'is_active'              => true,
             'organizational_unit_id' => null,
         ]);
