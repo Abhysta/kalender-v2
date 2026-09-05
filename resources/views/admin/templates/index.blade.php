@@ -120,11 +120,28 @@
                         @endif
                     </td>
                     <td class="px-4 py-3 text-right">
-                        <a href="{{ route('admin.templates.show', $template) }}"
-                           class="inline-flex items-center gap-1 h-7 px-3 bg-sky-50 text-sky-700 border border-sky-200 rounded-lg text-[11px] font-semibold no-underline hover:bg-sky-100 transition-colors">
-                            Detail
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
-                        </a>
+                        <div class="inline-flex items-center gap-2">
+                            <a href="{{ route('admin.templates.show', $template) }}"
+                               class="inline-flex items-center gap-1 h-7 px-3 bg-sky-50 text-sky-700 border border-sky-200 rounded-lg text-[11px] font-semibold no-underline hover:bg-sky-100 transition-colors">
+                                Detail
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+                            </a>
+                            <a href="{{ route('admin.templates.edit', $template) }}"
+                               class="inline-flex items-center gap-1 h-7 px-3 bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-[11px] font-semibold no-underline hover:bg-slate-100 transition-colors">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                Edit
+                            </a>
+                            <form action="{{ route('admin.templates.destroy', $template) }}" method="POST"
+                                  onsubmit="return confirm('Hapus template &quot;{{ $template->name }}&quot;? Tindakan ini tidak dapat dibatalkan.');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1 h-7 px-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-[11px] font-semibold hover:bg-red-100 transition-colors">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                    Hapus
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 @endforeach

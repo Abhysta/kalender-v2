@@ -104,7 +104,7 @@ class TemplateController extends Controller
             'day_type'        => ['required', 'in:working_day,calendar_day'],
             'work_days'       => ['required', 'integer', 'in:5,6,7'],
             'activity_type'   => ['nullable', 'string', 'max:50'],
-            'conflict_group'  => ['nullable', 'string', 'max:50'],
+            'conflict_group'  => ['nullable', 'in:seminar'],
             'is_alert'        => ['boolean'],
             'alert_type'      => ['nullable', 'string', 'max:50'],
             'can_manual_edit' => ['boolean'],
@@ -133,7 +133,7 @@ class TemplateController extends Controller
             'day_type'        => ['required', 'in:working_day,calendar_day'],
             'work_days'       => ['required', 'integer', 'in:5,6,7'],
             'activity_type'   => ['nullable', 'string', 'max:50'],
-            'conflict_group'  => ['nullable', 'string', 'max:50'],
+            'conflict_group'  => ['nullable', 'in:seminar'],
             'is_alert'        => ['boolean'],
             'alert_type'      => ['nullable', 'string', 'max:50'],
             'can_manual_edit' => ['boolean'],
@@ -221,7 +221,7 @@ class TemplateController extends Controller
                     'work_days'            => in_array((int)($row['work_days'] ?? 5), [5,6,7]) ? (int)$row['work_days'] : 5,
                     'offset_days'          => (int)($row['offset_days'] ?? 0),
                     'activity_type'        => $row['activity_type'] ?? null,
-                    'conflict_group'       => $row['conflict_group'] ?? null,
+                    'conflict_group'       => ($row['conflict_group'] ?? '') === 'seminar' ? 'seminar' : null,
                     'color'                => ! empty($row['color']) ? $row['color'] : $colors[$i % count($colors)],
                     'is_alert'             => in_array(strtolower($row['is_alert'] ?? ''), ['1','true','yes']),
                     'can_manual_edit'      => in_array(strtolower($row['can_manual_edit'] ?? ''), ['1','true','yes']),
@@ -233,6 +233,59 @@ class TemplateController extends Controller
 
         return redirect()->route('admin.templates.show', TrainingTemplate::where('code', $request->input('code'))->first())
             ->with('success', 'Template berhasil diimport dari file. ' . count($rows) . ' phase dibuat.');
+    }
+
+    public function importPhases(Request $request, TrainingTemplate $template)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls', 'max:2048'],
+        ]);
+
+        $file = $request->file('file');
+        $rows = $this->parseCsvOrExcel($file->getRealPath(), $file->getClientOriginalExtension());
+
+        if (empty($rows)) {
+            return back()->withErrors(['file' => 'File kosong atau format tidak valid.']);
+        }
+
+        $required = ['sequence', 'name', 'duration'];
+        $firstRow = array_keys($rows[0] ?? []);
+        foreach ($required as $col) {
+            if (! in_array($col, $firstRow)) {
+                return back()->withErrors(['file' => "Kolom wajib '{$col}' tidak ditemukan. Periksa header CSV."]);
+            }
+        }
+
+        $created = 0;
+        DB::transaction(function () use ($template, $rows, &$created) {
+            $existingCount = $template->phases()->count();
+            $colors = ['#0369A1','#0891B2','#059669','#D97706','#DC2626','#7C3AED','#BE185D','#0F172A'];
+
+            foreach ($rows as $i => $row) {
+                if (empty($row['name'])) {
+                    continue;
+                }
+                TemplatePhase::create([
+                    'training_template_id' => $template->id,
+                    'name'                 => trim($row['name']),
+                    'sequence'             => (int)($row['sequence'] ?? $existingCount + $i + 1),
+                    'duration'             => max(1, (int)($row['duration'] ?? 1)),
+                    'duration_unit'        => in_array($row['duration_unit'] ?? '', ['day','hour']) ? $row['duration_unit'] : 'day',
+                    'day_type'             => in_array($row['day_type'] ?? '', ['working_day','calendar_day']) ? $row['day_type'] : 'working_day',
+                    'work_days'            => in_array((int)($row['work_days'] ?? 5), [5,6,7]) ? (int)$row['work_days'] : 5,
+                    'offset_days'          => (int)($row['offset_days'] ?? 0),
+                    'activity_type'        => $row['activity_type'] ?? null,
+                    'conflict_group'       => ($row['conflict_group'] ?? '') === 'seminar' ? 'seminar' : null,
+                    'color'                => ! empty($row['color']) ? $row['color'] : $colors[$i % count($colors)],
+                    'is_alert'             => in_array(strtolower($row['is_alert'] ?? ''), ['1','true','yes']),
+                    'can_manual_edit'      => in_array(strtolower($row['can_manual_edit'] ?? ''), ['1','true','yes']),
+                ]);
+                $created++;
+            }
+        });
+
+        return redirect()->route('admin.templates.show', $template)
+            ->with('success', $created . ' phase berhasil diimport ke template ini.');
     }
 
     public function downloadCsvTemplate()

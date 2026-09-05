@@ -33,13 +33,6 @@
                     </span>
                 </div>
             </div>
-            <div class="flex gap-2">
-                <a href="{{ route('admin.templates.edit', $template) }}"
-                   class="inline-flex items-center gap-1.5 h-9 px-4 bg-white/10 border border-white/20 text-white rounded-lg text-[12px] font-semibold no-underline hover:bg-white/20 transition-colors">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    Edit Template
-                </a>
-            </div>
         </div>
         <div class="flex gap-4 mt-5 flex-wrap">
             <div class="bg-white/10 border border-white/15 rounded-xl px-4 py-3">
@@ -72,11 +65,41 @@
     <!-- PHASES LIST -->
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-base font-bold text-slate-900">Phase Pelatihan</h2>
-        <button onclick="document.getElementById('addPhaseForm').classList.toggle('hidden')"
-            class="inline-flex items-center gap-1.5 h-8 px-3 bg-sky-700 text-white rounded-lg text-[12px] font-semibold border-none cursor-pointer hover:bg-sky-600 transition-colors">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Tambah Phase
-        </button>
+        <div class="flex items-center gap-2">
+            <button type="button" onclick="document.getElementById('importPhaseForm').classList.toggle('hidden')"
+                class="inline-flex items-center gap-1.5 h-8 px-3 bg-green-600 text-white rounded-lg text-[12px] font-semibold border-none cursor-pointer hover:bg-green-500 transition-colors">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Import CSV/Excel
+            </button>
+            <button onclick="document.getElementById('addPhaseForm').classList.toggle('hidden')"
+                class="inline-flex items-center gap-1.5 h-8 px-3 bg-sky-700 text-white rounded-lg text-[12px] font-semibold border-none cursor-pointer hover:bg-sky-600 transition-colors">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Tambah Phase
+            </button>
+        </div>
+    </div>
+
+    <!-- IMPORT PHASE FORM -->
+    <div id="importPhaseForm" class="hidden mb-5">
+        <form method="POST" action="{{ route('admin.templates.phases.import', $template) }}" enctype="multipart/form-data"
+              class="bg-white border border-green-200 rounded-xl p-5 flex flex-col gap-4">
+            @csrf
+            <div class="flex items-center justify-between">
+                <h3 class="text-[13px] font-bold text-slate-800">Import Phase dari CSV/Excel</h3>
+                <a href="{{ route('admin.templates.download-csv') }}"
+                   class="inline-flex items-center gap-1.5 h-7 px-3 bg-green-50 text-green-700 border border-green-200 rounded-lg text-[11px] font-semibold no-underline hover:bg-green-100 transition-colors">
+                    Unduh Contoh CSV
+                </a>
+            </div>
+            <p class="text-[11px] text-slate-500 -mt-2">Phase dari file akan ditambahkan ke template ini (tidak membuat template baru). Kolom wajib: sequence, name, duration.</p>
+            <input type="file" name="file" accept=".csv,.txt,.xlsx,.xls" required
+                class="w-full text-[13px] text-slate-700 file:mr-3 file:h-8 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-[12px] file:font-semibold file:cursor-pointer hover:file:bg-slate-200">
+            <div class="flex gap-2 justify-end pt-1 border-t border-slate-100">
+                <button type="button" onclick="document.getElementById('importPhaseForm').classList.add('hidden')"
+                    class="h-8 px-4 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-semibold border-none cursor-pointer hover:bg-slate-200">Batal</button>
+                <button type="submit" class="h-8 px-4 bg-green-600 text-white rounded-lg text-[12px] font-bold border-none cursor-pointer hover:bg-green-500">Upload & Import</button>
+            </div>
+        </form>
     </div>
 
     <!-- ADD PHASE FORM -->
@@ -136,8 +159,10 @@
                 </div>
                 <div>
                     <label class="block text-[11px] font-semibold text-slate-600 mb-1">Conflict Group</label>
-                    <input type="text" name="conflict_group" placeholder="seminar"
-                        class="w-full h-9 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-2.5 text-[13px] text-slate-900 outline-none focus:border-sky-700 focus:bg-white">
+                    <select name="conflict_group" class="w-full h-9 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-2.5 text-[13px] text-slate-900 outline-none focus:border-sky-700 focus:bg-white select-custom">
+                        <option value="">Tidak ada</option>
+                        <option value="seminar">Seminar</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block text-[11px] font-semibold text-slate-600 mb-1">Warna</label>
@@ -220,11 +245,106 @@
                         <div class="color-dot mx-auto" style="background:{{ $phase->color }}"></div>
                     </td>
                     <td class="px-3 py-3 text-right">
-                        <form method="POST" action="{{ route('admin.templates.phases.destroy', [$template, $phase]) }}" onsubmit="return confirm('Hapus phase ini?')">
-                            @csrf @method('DELETE')
-                            <button type="submit" class="w-7 h-7 bg-slate-50 border border-slate-200 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all cursor-pointer flex items-center justify-center">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                        <div class="inline-flex items-center gap-1.5">
+                            <button type="button"
+                                onclick="document.getElementById('editPhaseRow{{ $phase->id }}').classList.toggle('hidden')"
+                                class="w-7 h-7 bg-slate-50 border border-slate-200 rounded-lg text-slate-400 hover:bg-sky-50 hover:text-sky-600 hover:border-sky-200 transition-all cursor-pointer flex items-center justify-center">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                             </button>
+                            <form method="POST" action="{{ route('admin.templates.phases.destroy', [$template, $phase]) }}" onsubmit="return confirm('Hapus phase ini?')">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="w-7 h-7 bg-slate-50 border border-slate-200 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all cursor-pointer flex items-center justify-center">
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                <tr id="editPhaseRow{{ $phase->id }}" class="hidden bg-sky-50/40">
+                    <td colspan="8" class="px-4 py-4">
+                        <form method="POST" action="{{ route('admin.templates.phases.update', [$template, $phase]) }}"
+                              class="bg-white border border-sky-200 rounded-xl p-5 flex flex-col gap-4">
+                            @csrf
+                            @method('PUT')
+                            <h3 class="text-[13px] font-bold text-slate-800">Edit Phase</h3>
+                            <div class="grid grid-cols-3 gap-3 max-[640px]:grid-cols-2 max-[400px]:grid-cols-1">
+                                <div class="col-span-2 max-[640px]:col-span-2">
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Nama Phase *</label>
+                                    <input type="text" name="name" value="{{ $phase->name }}" required
+                                        class="w-full h-9 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-2.5 text-[13px] text-slate-900 outline-none focus:border-sky-700 focus:bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Urutan *</label>
+                                    <input type="number" name="sequence" value="{{ $phase->sequence }}" min="0" required
+                                        class="w-full h-9 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-2.5 text-[13px] font-mono text-slate-900 outline-none focus:border-sky-700 focus:bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Durasi *</label>
+                                    <input type="number" name="duration" value="{{ $phase->duration }}" min="1" required
+                                        class="w-full h-9 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-2.5 text-[13px] font-mono text-slate-900 outline-none focus:border-sky-700 focus:bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Satuan</label>
+                                    <select name="duration_unit" class="w-full h-9 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-2.5 text-[13px] text-slate-900 outline-none focus:border-sky-700 focus:bg-white select-custom">
+                                        <option value="day" {{ $phase->duration_unit === 'day' ? 'selected' : '' }}>Hari</option>
+                                        <option value="hour" {{ $phase->duration_unit === 'hour' ? 'selected' : '' }}>Jam</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Offset Hari</label>
+                                    <input type="number" name="offset_days" value="{{ $phase->offset_days }}"
+                                        class="w-full h-9 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-2.5 text-[13px] font-mono text-slate-900 outline-none focus:border-sky-700 focus:bg-white"
+                                        title="0=berurutan, -1=H-1 dari start batch">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Jenis Hari</label>
+                                    <select name="day_type" class="w-full h-9 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-2.5 text-[13px] text-slate-900 outline-none focus:border-sky-700 focus:bg-white select-custom">
+                                        <option value="working_day" {{ $phase->day_type === 'working_day' ? 'selected' : '' }}>Hari Kerja</option>
+                                        <option value="calendar_day" {{ $phase->day_type === 'calendar_day' ? 'selected' : '' }}>Hari Kalender</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Hari Kerja / Minggu</label>
+                                    <select name="work_days" class="w-full h-9 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-2.5 text-[13px] text-slate-900 outline-none focus:border-sky-700 focus:bg-white select-custom">
+                                        <option value="5" {{ (int)$phase->work_days === 5 ? 'selected' : '' }}>5 hari (Sen–Jum)</option>
+                                        <option value="6" {{ (int)$phase->work_days === 6 ? 'selected' : '' }}>6 hari (Sen–Sab)</option>
+                                        <option value="7" {{ (int)$phase->work_days === 7 ? 'selected' : '' }}>7 hari (termasuk Minggu)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Jenis Aktivitas</label>
+                                    <input type="text" name="activity_type" value="{{ $phase->activity_type }}" placeholder="seminar/classroom"
+                                        class="w-full h-9 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-2.5 text-[13px] text-slate-900 outline-none focus:border-sky-700 focus:bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Conflict Group</label>
+                                    <select name="conflict_group" class="w-full h-9 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-2.5 text-[13px] text-slate-900 outline-none focus:border-sky-700 focus:bg-white select-custom">
+                                        <option value="" {{ ! $phase->conflict_group ? 'selected' : '' }}>Tidak ada</option>
+                                        <option value="seminar" {{ $phase->conflict_group === 'seminar' ? 'selected' : '' }}>Seminar</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Warna</label>
+                                    <input type="color" name="color" value="{{ $phase->color }}"
+                                        class="w-full h-9 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-1.5 cursor-pointer">
+                                </div>
+                                <div class="flex items-end gap-4 pb-1 flex-wrap">
+                                    <label class="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer">
+                                        <input type="checkbox" name="is_alert" value="1" {{ $phase->is_alert ? 'checked' : '' }} class="accent-sky-700">
+                                        Alert
+                                    </label>
+                                    <label class="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer">
+                                        <input type="checkbox" name="can_manual_edit" value="1" {{ $phase->can_manual_edit ? 'checked' : '' }} class="accent-sky-700">
+                                        Edit Manual
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 justify-end pt-1 border-t border-slate-100">
+                                <button type="button"
+                                    onclick="document.getElementById('editPhaseRow{{ $phase->id }}').classList.add('hidden')"
+                                    class="h-8 px-4 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-semibold border-none cursor-pointer hover:bg-slate-200">Batal</button>
+                                <button type="submit" class="h-8 px-4 bg-sky-700 text-white rounded-lg text-[12px] font-bold border-none cursor-pointer hover:bg-sky-600">Simpan Perubahan</button>
+                            </div>
                         </form>
                     </td>
                 </tr>

@@ -51,6 +51,7 @@ Route::middleware(['auth', 'ensure.active'])->prefix('admin')->name('admin.')->g
         Route::put('/templates/{template}',                   [TemplateController::class, 'update'])->name('templates.update');
         Route::delete('/templates/{template}',                [TemplateController::class, 'destroy'])->name('templates.destroy');
         Route::post('/templates/{template}/phases',           [TemplateController::class, 'storePhase'])->name('templates.phases.store');
+        Route::post('/templates/{template}/phases/import',    [TemplateController::class, 'importPhases'])->name('templates.phases.import');
         Route::put('/templates/{template}/phases/{phase}',    [TemplateController::class, 'updatePhase'])->name('templates.phases.update');
         Route::delete('/templates/{template}/phases/{phase}', [TemplateController::class, 'destroyPhase'])->name('templates.phases.destroy');
     });

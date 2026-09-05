@@ -9,7 +9,7 @@
 @include('admin.partials.navbar')
 
 <main class="max-w-[680px] mx-auto px-6 pt-10 pb-16 max-[640px]:px-4">
-    <a href="{{ route('admin.templates.show', $template) }}" class="inline-flex items-center gap-1.5 text-[13px] text-slate-500 hover:text-sky-700 no-underline mb-5">
+    <a href="{{ route('admin.templates.index') }}" class="inline-flex items-center gap-1.5 text-[13px] text-slate-500 hover:text-sky-700 no-underline mb-5">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
         Kembali
     </a>
@@ -63,7 +63,7 @@
                 <button type="submit" class="h-9 px-4 bg-red-50 text-red-700 border border-red-200 rounded-lg text-[12px] font-semibold cursor-pointer hover:bg-red-100 transition-colors">Hapus Template</button>
             </form>
             <div class="flex gap-2">
-                <a href="{{ route('admin.templates.show', $template) }}" class="h-10 px-5 flex items-center bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold no-underline hover:bg-slate-200">Batal</a>
+                <a href="{{ route('admin.templates.index') }}" class="h-10 px-5 flex items-center bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold no-underline hover:bg-slate-200">Batal</a>
                 <button type="submit" class="h-10 px-5 bg-sky-700 text-white rounded-lg text-sm font-bold border-none cursor-pointer hover:bg-sky-600">Simpan</button>
             </div>
         </div>
