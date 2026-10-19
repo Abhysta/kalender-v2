@@ -12,14 +12,16 @@ class TrainingBatch extends Model
         'training_template_id', 'organizational_unit_id', 'batch_number',
         'year', 'name', 'start_date', 'end_date', 'participant_count', 'status',
         'has_conflict_alert', 'created_by', 'updated_by',
+        'annual_calendar_activity_id', 'override_start_date',
     ];
 
     protected function casts(): array
     {
         return [
-            'start_date'         => 'date',
-            'end_date'           => 'date',
-            'has_conflict_alert' => 'boolean',
+            'start_date'           => 'date',
+            'end_date'             => 'date',
+            'has_conflict_alert'   => 'boolean',
+            'override_start_date'  => 'date',
         ];
     }
 
@@ -31,6 +33,16 @@ class TrainingBatch extends Model
     public function organizationalUnit(): BelongsTo
     {
         return $this->belongsTo(OrganizationalUnit::class);
+    }
+
+    public function annualCalendarActivity(): BelongsTo
+    {
+        return $this->belongsTo(AnnualCalendarActivity::class);
+    }
+
+    public function hasDateOverride(): bool
+    {
+        return $this->override_start_date !== null;
     }
 
     public function schedules(): HasMany

@@ -11,15 +11,15 @@ class TemplatePhase extends Model
     protected $fillable = [
         'training_template_id', 'name', 'sequence', 'duration', 'duration_unit',
         'offset_days', 'day_type', 'work_days', 'activity_type', 'conflict_group',
-        'is_alert', 'alert_type', 'can_manual_edit', 'color',
+        'is_alert', 'alert_type', 'color',
+        'sequence_catalog_id', 'conflict_group_id',
     ];
 
     protected function casts(): array
     {
         return [
-            'work_days'       => 'integer',
-            'is_alert'        => 'boolean',
-            'can_manual_edit' => 'boolean',
+            'work_days' => 'integer',
+            'is_alert'  => 'boolean',
         ];
     }
 
@@ -31,5 +31,15 @@ class TemplatePhase extends Model
     public function schedules(): HasMany
     {
         return $this->hasMany(BatchSchedule::class);
+    }
+
+    public function sequenceCatalog(): BelongsTo
+    {
+        return $this->belongsTo(SequenceCatalog::class, 'sequence_catalog_id');
+    }
+
+    public function conflictGroupRef(): BelongsTo
+    {
+        return $this->belongsTo(ConflictGroup::class, 'conflict_group_id');
     }
 }

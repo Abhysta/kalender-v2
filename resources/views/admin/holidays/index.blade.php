@@ -112,7 +112,7 @@
                                                 class="h-6 px-2 bg-slate-50 border border-slate-200 rounded text-[10px] text-slate-500 font-semibold cursor-pointer hover:border-sky-300 hover:text-sky-600 transition-colors">
                                                 Edit
                                             </button>
-                                            <form method="POST" action="{{ route('admin.holidays.destroy', $holiday) }}" onsubmit="return confirm('Hapus?')">
+                                            <form method="POST" action="{{ route('admin.holidays.destroy', $holiday) }}" onsubmit="return confirmModal(event, 'Hapus hari libur ini?', true)">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="h-6 px-2 bg-red-50 border border-red-200 rounded text-[10px] text-red-600 font-semibold cursor-pointer hover:bg-red-100 transition-colors">✕</button>
                                             </form>

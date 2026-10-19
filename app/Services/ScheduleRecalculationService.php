@@ -57,16 +57,9 @@ class ScheduleRecalculationService
                 'recalculated_at'      => now(),
             ]);
 
-            // Seminar conflict check
-            if ($s->conflict_group === 'seminar') {
-                if ($this->conflictChecker->hasSeminarConflict(
-                    $newStart->toDateString(),
-                    $newEnd->toDateString(),
-                    $s->training_batch_id,
-                    $s->id
-                )) {
-                    $result['seminar_conflicts'][] = $s;
-                }
+            // Conflict-group check (any configured group, not just a hardcoded 'seminar')
+            if ($s->isGrouped() && $this->conflictChecker->hasGroupConflict($s, $s->id)) {
+                $result['seminar_conflicts'][] = $s;
             }
 
             // WI conflict check on shifted assignments
@@ -217,15 +210,8 @@ class ScheduleRecalculationService
                     'recalculated_at'      => now(),
                 ]);
 
-                if ($schedule->conflict_group === 'seminar') {
-                    if ($this->conflictChecker->hasSeminarConflict(
-                        $newStart->toDateString(),
-                        $newEnd->toDateString(),
-                        $schedule->training_batch_id,
-                        $schedule->id
-                    )) {
-                        $result['seminar_conflicts'][] = $schedule;
-                    }
+                if ($schedule->isGrouped() && $this->conflictChecker->hasGroupConflict($schedule, $schedule->id)) {
+                    $result['seminar_conflicts'][] = $schedule;
                 }
 
                 $schedule->refresh();

@@ -249,7 +249,7 @@
     <div class="grid grid-cols-2 gap-5 mb-10 big-grid max-[640px]:grid-cols-1">
 
         <!-- Katalog -->
-        <a href="/admin/catalog" class="big-card no-underline" id="bigCatalog">
+        <a href="{{ route('admin.catalog') }}" class="big-card no-underline" id="bigCatalog">
             <div class="big-card-header" style="background:linear-gradient(135deg,#0F172A 0%,#1e3a5f 100%)">
                 <div class="big-card-icon">
                     <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1">
@@ -278,7 +278,7 @@
         </a>
 
         <!-- Kalender -->
-        <a href="/admin/calendar" class="big-card no-underline" id="bigCalendar">
+        <a href="{{ route('admin.calendar') }}" class="big-card no-underline" id="bigCalendar">
             <div class="big-card-header" style="background:linear-gradient(135deg,#064E3B 0%,#065F46 100%)">
                 <div class="big-card-icon">
                     <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1">
@@ -312,10 +312,29 @@
     <!-- ── SYSTEM FEATURES ───────────────────────────── -->
     <div class="flex items-baseline gap-2.5 mb-5">
         <h2 class="text-lg font-bold text-slate-900">Fitur Sistem</h2>
-        <span class="font-mono text-[13px] text-slate-500">{{ auth()->user()->isSuperAdmin() ? 7 : 6 }} aktif · 1 segera</span>
+        <span class="font-mono text-[13px] text-slate-500">{{ auth()->user()->isSuperAdmin() ? 8 : 7 }} aktif · 1 segera</span>
     </div>
 
     <div class="grid grid-cols-4 gap-4 mb-10 feat-grid max-[900px]:grid-cols-3 max-[640px]:grid-cols-2 max-[400px]:grid-cols-1">
+
+        <!-- Kalender Tahunan -->
+        <a href="{{ route('admin.annual-calendars.index') }}" class="feat-card available no-underline">
+            <div class="feat-card-header" style="background:linear-gradient(135deg,#064E3B 0%,#0369A1 100%)">
+                <div class="feat-card-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
+                        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h2M14 14h2M8 18h2M14 18h2"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="feat-card-body">
+                <div class="feat-card-title">Kalender Tahunan</div>
+                <div class="feat-card-desc">Rencana kegiatan per tahun, opsional sebagai sumber tanggal Sequence.</div>
+            </div>
+            <div class="feat-card-footer">
+                <span class="badge-avail"><span class="w-1.5 h-1.5 bg-green-600 rounded-full"></span>Aktif</span>
+                <span class="feat-card-cta">Buka →</span>
+            </div>
+        </a>
 
         <!-- Template -->
         <a href="{{ route('admin.templates.index') }}" class="feat-card available no-underline">

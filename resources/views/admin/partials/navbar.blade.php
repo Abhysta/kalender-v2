@@ -37,6 +37,10 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
             <span class="max-[640px]:hidden">Dashboard</span>
         </a>
+        <a href="{{ route('admin.annual-calendars.index') }}" class="nav-link {{ request()->routeIs('admin.annual-calendars*') ? 'active' : '' }}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h2M14 14h2M8 18h2M14 18h2"/></svg>
+            <span class="max-[768px]:hidden">Kalender Tahunan</span>
+        </a>
         <a href="{{ route('admin.templates.index') }}" class="nav-link {{ request()->routeIs('admin.templates*') ? 'active' : '' }}">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             <span class="max-[768px]:hidden">Template</span>
@@ -57,6 +61,12 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
             <span class="max-[900px]:hidden">Konflik</span>
         </a>
+        @can('manage_conflict_groups')
+        <a href="{{ route('admin.conflict-groups.index') }}" class="nav-link {{ request()->routeIs('admin.conflict-groups*') ? 'active' : '' }}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M9 6h6a3 3 0 0 1 3 3v6"/></svg>
+            <span class="max-[900px]:hidden">Grup Konflik</span>
+        </a>
+        @endcan
         @if(auth()->user()->isSuperAdmin())
         <a href="{{ route('admin.users.index') }}" class="nav-link {{ request()->routeIs('admin.users*') ? 'active' : '' }}">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -66,7 +76,7 @@
     </nav>
 
     <div class="flex items-center gap-2 ml-auto shrink-0">
-        <form method="POST" action="/logout" style="display:inline;">
+        <form method="POST" action="{{ route('logout') }}" style="display:inline;">
             @csrf
             <button type="submit" class="inline-flex items-center gap-1.5 h-[32px] px-3 bg-red-50 text-red-800 border border-red-200 rounded-lg text-[12px] font-semibold font-sans cursor-pointer transition-all duration-150 hover:bg-red-100">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -79,3 +89,39 @@
         </div>
     </div>
 </nav>
+
+<!-- Shared confirm modal — replaces native confirm() on every page that includes this navbar -->
+<div id="confirmModalOverlay" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-5" role="alertdialog" aria-modal="true" aria-labelledby="confirmModalText">
+        <p id="confirmModalText" class="text-[13px] text-slate-700 leading-relaxed mb-5"></p>
+        <div class="flex justify-end gap-2">
+            <button type="button" onclick="closeConfirmModal()" class="h-9 px-4 bg-slate-100 text-slate-700 rounded-lg text-[13px] font-semibold border-none cursor-pointer hover:bg-slate-200">Batal</button>
+            <button type="button" id="confirmModalYes" class="h-9 px-4 rounded-lg text-[13px] font-semibold border-none cursor-pointer text-white"></button>
+        </div>
+    </div>
+</div>
+<script>
+    function confirmModal(evt, message, danger = false) {
+        evt.preventDefault();
+        const form    = evt.target;
+        const overlay = document.getElementById('confirmModalOverlay');
+        document.getElementById('confirmModalText').textContent = message;
+        const yes = document.getElementById('confirmModalYes');
+        yes.textContent = danger ? 'Hapus' : 'Lanjutkan';
+        yes.className = 'h-9 px-4 rounded-lg text-[13px] font-semibold border-none cursor-pointer text-white ' +
+            (danger ? 'bg-red-600 hover:bg-red-500' : 'bg-sky-700 hover:bg-sky-600');
+        yes.onclick = () => { closeConfirmModal(); form.submit(); };
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
+        return false;
+    }
+    function closeConfirmModal() {
+        const overlay = document.getElementById('confirmModalOverlay');
+        overlay.classList.add('hidden');
+        overlay.classList.remove('flex');
+    }
+    document.getElementById('confirmModalOverlay').addEventListener('click', e => {
+        if (e.target.id === 'confirmModalOverlay') closeConfirmModal();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeConfirmModal(); });
+</script>

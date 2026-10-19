@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\OrganizationalUnit;
 use App\Models\TemplatePhase;
 use App\Models\TrainingTemplate;
+use App\Services\SequenceCatalogService;
 use App\Traits\ParsesCsvOrExcel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,14 +15,20 @@ use Illuminate\Validation\Rule;
 class TemplateController extends Controller
 {
     use ParsesCsvOrExcel;
+
+    public function __construct(
+        private readonly SequenceCatalogService $sequenceCatalog,
+    ) {}
+
     public function index()
     {
         $user      = Auth::user();
         $templates = $user->applyOwnership(
             TrainingTemplate::with('organizationalUnit')->withCount('phases', 'batches')->latest()
         )->get();
+        $units = OrganizationalUnit::where('is_active', true)->get();
 
-        return view('admin.templates.index', compact('templates'));
+        return view('admin.templates.index', compact('templates', 'units'));
     }
 
     public function create()
@@ -58,12 +65,6 @@ class TemplateController extends Controller
         return view('admin.templates.show', compact('template'));
     }
 
-    public function edit(TrainingTemplate $template)
-    {
-        $units = OrganizationalUnit::where('is_active', true)->get();
-        return view('admin.templates.edit', compact('template', 'units'));
-    }
-
     public function update(Request $request, TrainingTemplate $template)
     {
         $data = $request->validate([
@@ -74,10 +75,11 @@ class TemplateController extends Controller
             'is_active'              => ['boolean'],
         ]);
 
+        $data['is_active']  = $request->boolean('is_active');
         $data['updated_by'] = Auth::id();
         $template->update($data);
 
-        return redirect()->route('admin.templates.show', $template)
+        return redirect()->route('admin.templates.index')
             ->with('success', 'Template berhasil diperbarui.');
     }
 
@@ -107,14 +109,19 @@ class TemplateController extends Controller
             'conflict_group'  => ['nullable', 'string', 'max:50'],
             'is_alert'        => ['boolean'],
             'alert_type'      => ['nullable', 'string', 'max:50'],
-            'can_manual_edit' => ['boolean'],
             'color'           => ['nullable', 'string', 'max:20'],
         ]);
 
         $data['training_template_id'] = $template->id;
         $data['offset_days']     = $data['offset_days'] ?? 0;
         $data['is_alert']        = $request->boolean('is_alert');
-        $data['can_manual_edit'] = $request->boolean('can_manual_edit');
+
+        // Same canonical resolution as Excel import, so a manually-added phase and an
+        // imported one with the same name/conflict group land on the identical ConflictGroup.
+        $resolved                   = $this->sequenceCatalog->resolve($data['name'], $data['conflict_group'] ?? null);
+        $data['sequence_catalog_id'] = $resolved['catalog']->id;
+        $data['conflict_group_id']   = $resolved['group']?->id;
+        $data['conflict_group']      = $resolved['group']?->code ?? ($data['conflict_group'] ?? null);
 
         TemplatePhase::create($data);
 
@@ -136,13 +143,16 @@ class TemplateController extends Controller
             'conflict_group'  => ['nullable', 'string', 'max:50'],
             'is_alert'        => ['boolean'],
             'alert_type'      => ['nullable', 'string', 'max:50'],
-            'can_manual_edit' => ['boolean'],
             'color'           => ['nullable', 'string', 'max:20'],
         ]);
 
         $data['offset_days']     = $data['offset_days'] ?? 0;
         $data['is_alert']        = $request->boolean('is_alert');
-        $data['can_manual_edit'] = $request->boolean('can_manual_edit');
+
+        $resolved                   = $this->sequenceCatalog->resolve($data['name'], $data['conflict_group'] ?? null);
+        $data['sequence_catalog_id'] = $resolved['catalog']->id;
+        $data['conflict_group_id']   = $resolved['group']?->id;
+        $data['conflict_group']      = $resolved['group']?->code ?? ($data['conflict_group'] ?? null);
 
         $phase->update($data);
 
@@ -190,7 +200,7 @@ class TemplateController extends Controller
             }
         }
 
-        DB::transaction(function () use ($request, $rows) {
+        $template = DB::transaction(function () use ($request, $rows) {
             $user   = Auth::user();
             $unitId = ! $user->isSuperAdmin()
                 ? $user->organizational_unit_id
@@ -206,33 +216,93 @@ class TemplateController extends Controller
                 'updated_by'             => $user->id,
             ]);
 
-            $colors = ['#0369A1','#0891B2','#059669','#D97706','#DC2626','#7C3AED','#BE185D','#0F172A'];
-            foreach ($rows as $i => $row) {
-                if (empty($row['name'])) {
-                    continue;
-                }
-                TemplatePhase::create([
-                    'training_template_id' => $template->id,
-                    'name'                 => trim($row['name']),
-                    'sequence'             => (int)($row['sequence'] ?? $i + 1),
-                    'duration'             => max(1, (int)($row['duration'] ?? 1)),
-                    'duration_unit'        => in_array($row['duration_unit'] ?? '', ['day','hour']) ? $row['duration_unit'] : 'day',
-                    'day_type'             => in_array($row['day_type'] ?? '', ['working_day','calendar_day']) ? $row['day_type'] : 'working_day',
-                    'work_days'            => in_array((int)($row['work_days'] ?? 5), [5,6,7]) ? (int)$row['work_days'] : 5,
-                    'offset_days'          => (int)($row['offset_days'] ?? 0),
-                    'activity_type'        => $row['activity_type'] ?? null,
-                    'conflict_group'       => $row['conflict_group'] ?? null,
-                    'color'                => ! empty($row['color']) ? $row['color'] : $colors[$i % count($colors)],
-                    'is_alert'             => in_array(strtolower($row['is_alert'] ?? ''), ['1','true','yes']),
-                    'can_manual_edit'      => in_array(strtolower($row['can_manual_edit'] ?? ''), ['1','true','yes']),
-                ]);
-            }
+            $this->importPhaseRows($template, $rows);
 
             session(['import_template_id' => $template->id]);
+
+            return $template;
         });
 
-        return redirect()->route('admin.templates.show', TrainingTemplate::where('code', $request->input('code'))->first())
+        return redirect()->route('admin.templates.show', $template)
             ->with('success', 'Template berhasil diimport dari file. ' . count($rows) . ' phase dibuat.');
+    }
+
+    /**
+     * Import phases from Excel/CSV into an EXISTING template (created manually or
+     * otherwise) — same canonical resolution as the create-new-template import, just
+     * appended after whatever phases the template already has instead of replacing them.
+     */
+    public function importPhases(Request $request, TrainingTemplate $template)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls', 'max:2048'],
+        ]);
+
+        $file = $request->file('file');
+        $rows = $this->parseCsvOrExcel($file->getRealPath(), $file->getClientOriginalExtension());
+
+        if (empty($rows)) {
+            return back()->withErrors(['file' => 'File kosong atau format tidak valid.']);
+        }
+
+        $required = ['name', 'duration'];
+        $firstRow = array_keys($rows[0] ?? []);
+        foreach ($required as $col) {
+            if (! in_array($col, $firstRow)) {
+                return back()->withErrors(['file' => "Kolom wajib '{$col}' tidak ditemukan. Periksa header CSV."]);
+            }
+        }
+
+        $created = DB::transaction(fn () => $this->importPhaseRows($template, $rows, appendMode: true));
+
+        return redirect()->route('admin.templates.show', $template)
+            ->with('success', "{$created} phase berhasil diimport ke template ini.");
+    }
+
+    /**
+     * Shared per-row phase creation for both import entrypoints. In append mode, the
+     * CSV's own 'sequence' column is ignored and phases are simply appended after the
+     * template's current last sequence, so imported rows never collide with existing ones.
+     */
+    private function importPhaseRows(TrainingTemplate $template, array $rows, bool $appendMode = false): int
+    {
+        $colors  = ['#0369A1','#0891B2','#059669','#D97706','#DC2626','#7C3AED','#BE185D','#0F172A'];
+        $base    = $appendMode ? (int) ($template->phases()->max('sequence') ?? 0) : 0;
+        $created = 0;
+
+        foreach ($rows as $i => $row) {
+            if (empty($row['name'])) {
+                continue;
+            }
+
+            // Resolve to a stable canonical activity identity (exact normalized-name
+            // match, auto-created if genuinely new) and its conflict group, so typo'd
+            // or re-typed names across different imports still land on the same group.
+            $resolved = $this->sequenceCatalog->resolve(trim($row['name']), $row['conflict_group'] ?? null);
+
+            TemplatePhase::create([
+                'training_template_id' => $template->id,
+                'name'                 => trim($row['name']),
+                'sequence_catalog_id'  => $resolved['catalog']->id,
+                'conflict_group_id'    => $resolved['group']?->id,
+                'sequence'             => $appendMode ? $base + $i + 1 : (int) ($row['sequence'] ?? $i + 1),
+                'duration'             => max(1, (int) ($row['duration'] ?? 1)),
+                'duration_unit'        => in_array($row['duration_unit'] ?? '', ['day','hour']) ? $row['duration_unit'] : 'day',
+                'day_type'             => in_array($row['day_type'] ?? '', ['working_day','calendar_day']) ? $row['day_type'] : 'working_day',
+                'work_days'            => in_array((int) ($row['work_days'] ?? 5), [5,6,7]) ? (int) $row['work_days'] : 5,
+                'offset_days'          => (int) ($row['offset_days'] ?? 0),
+                'activity_type'        => $row['activity_type'] ?? null,
+                // Canonical group code wins when resolved, so legacy string-based
+                // conflict checks stay correct even for typo'd/re-typed names.
+                'conflict_group'       => $resolved['group']?->code ?? ($row['conflict_group'] ?? null),
+                'color'                => $colors[array_rand($colors)],
+                'is_alert'             => in_array(strtolower($row['is_alert'] ?? ''), ['1','true','yes']),
+            ]);
+
+            $created++;
+        }
+
+        return $created;
     }
 
     public function downloadCsvTemplate()
@@ -243,14 +313,14 @@ class TemplateController extends Controller
         ];
 
         $rows = [
-            ['sequence','name','duration','duration_unit','day_type','work_days','offset_days','activity_type','conflict_group','color','is_alert','can_manual_edit'],
-            [1,'CekIn1',1,'day','working_day',5,-1,'checkin','','#0369A1',0,0],
-            [2,'On-Campus1',3,'day','working_day',5,0,'classroom','','#0891B2',0,0],
-            [3,'Klasikal1',5,'day','working_day',6,0,'classroom','','#059669',0,0],
-            [4,'Seminar',1,'day','working_day',5,0,'seminar','seminar','#EF4444',1,0],
-            [5,'OJT1',10,'day','working_day',6,0,'ojt','','#7C3AED',0,1],
-            [6,'Post-Test',1,'day','working_day',5,0,'test','','#D97706',0,0],
-            [7,'CekOut',1,'day','working_day',5,0,'checkin','','#64748B',0,0],
+            ['sequence','name','duration','duration_unit','day_type','work_days','offset_days','activity_type','conflict_group','is_alert'],
+            [1,'CekIn1',1,'day','working_day',5,-1,'checkin','',0],
+            [2,'On-Campus1',3,'day','working_day',5,0,'classroom','',0],
+            [3,'Klasikal1',5,'day','working_day',6,0,'classroom','',0],
+            [4,'Seminar',1,'day','working_day',5,0,'seminar','seminar',1],
+            [5,'OJT1',10,'day','working_day',6,0,'ojt','',0],
+            [6,'Post-Test',1,'day','working_day',5,0,'test','',0],
+            [7,'CekOut',1,'day','working_day',5,0,'checkin','',0],
         ];
 
         $callback = function () use ($rows) {

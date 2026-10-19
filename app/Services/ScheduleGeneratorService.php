@@ -13,6 +13,7 @@ class ScheduleGeneratorService
     public function __construct(
         private readonly WorkingDayService    $workingDayService,
         private readonly ConflictCheckerService $conflictChecker,
+        private readonly ConflictAlertService $conflictAlerts,
     ) {}
 
     /**
@@ -45,6 +46,7 @@ class ScheduleGeneratorService
                     'sequence'          => $phase->sequence,
                     'activity_type'     => $phase->activity_type,
                     'conflict_group'    => $phase->conflict_group,
+                    'conflict_group_id' => $phase->conflict_group_id,
                     'color'             => $phase->color,
                     'is_alert'          => $phase->is_alert,
                 ]);
@@ -61,15 +63,12 @@ class ScheduleGeneratorService
 
         $batch->refresh();
 
+        // Conflict-group check (any configured group, not a hardcoded 'seminar' literal)
         $seminarConflicts = $batch->schedules()
-            ->where('conflict_group', 'seminar')
             ->get()
-            ->filter(fn($s) => $this->conflictChecker->hasSeminarConflict(
-                $s->start_date->toDateString(),
-                $s->end_date->toDateString(),
-                $batch->id,
-                $s->id
-            ))->values()->all();
+            ->filter(fn($s) => $s->isGrouped())
+            ->filter(fn($s) => $this->conflictChecker->hasGroupConflict($s, $s->id))
+            ->values()->all();
 
         $wiConflicts = [];
         foreach ($batch->schedules()->with('wiAssignments')->get() as $s) {
@@ -87,6 +86,9 @@ class ScheduleGeneratorService
 
         $hasConflict = ! empty($seminarConflicts) || ! empty($wiConflicts);
         $batch->update(['has_conflict_alert' => $hasConflict]);
+
+        // Persist deduplicated, resolvable alerts against the final recalculated schedule.
+        $this->conflictAlerts->evaluateBatch($batch);
 
         return [
             'batch'             => $batch->fresh(),
@@ -125,13 +127,7 @@ class ScheduleGeneratorService
             ? 1
             : $phase->duration;
 
-        if ($durationDays <= 1) {
-            $end = $start->copy();
-        } elseif ($phase->day_type === 'working_day') {
-            $end = $this->workingDayService->addWorkingDays($start, $durationDays - 1, $workDays);
-        } else {
-            $end = $this->workingDayService->addCalendarDays($start, $durationDays - 1);
-        }
+        $end = $this->workingDayService->computeEndDate($start, $durationDays, $phase->day_type, $workDays);
 
         return [$start, $end];
     }

@@ -18,6 +18,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage_units',
             'manage_templates',
             'manage_batches',
+            'manage_annual_calendar',
+            'manage_conflict_groups',
             'generate_schedule',
             'assign_wi',
             'manage_holidays',
@@ -38,6 +40,8 @@ class RolesAndPermissionsSeeder extends Seeder
         $unitManager->syncPermissions([
             'manage_templates',
             'manage_batches',
+            'manage_annual_calendar',
+            'manage_conflict_groups',
             'generate_schedule',
             'assign_wi',
             'manage_holidays',
@@ -48,6 +52,8 @@ class RolesAndPermissionsSeeder extends Seeder
         $admin->syncPermissions([
             'manage_templates',
             'manage_batches',
+            'manage_annual_calendar',
+            'manage_conflict_groups',
             'generate_schedule',
             'assign_wi',
             'export_pdf',

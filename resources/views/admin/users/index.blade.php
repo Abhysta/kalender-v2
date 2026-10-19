@@ -112,7 +112,7 @@
                                         Edit
                                     </button>
                                     @if($user->id !== auth()->id())
-                                    <form method="POST" action="{{ route('admin.users.destroy', $user) }}" onsubmit="return confirm('Hapus user {{ addslashes($user->name) }}?')">
+                                    <form method="POST" action="{{ route('admin.users.destroy', $user) }}" onsubmit="return confirmModal(event, 'Hapus user {{ addslashes($user->name) }}?', true)">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="h-7 px-2.5 bg-red-50 border border-red-200 rounded text-[11px] text-red-600 font-semibold cursor-pointer hover:bg-red-100 transition-colors">Hapus</button>
                                     </form>

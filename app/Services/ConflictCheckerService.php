@@ -10,29 +10,39 @@ use Illuminate\Support\Collection;
 class ConflictCheckerService
 {
     /**
-     * Find all seminar conflicts globally (across all batches).
+     * Find all cross-batch conflicts for any conflict group globally (not just a hardcoded
+     * 'seminar' literal) — any two grouped activities in the SAME group (matched by canonical
+     * conflict_group_id when resolved, else legacy conflict_group string) that overlap dates.
      * Returns pairs of conflicting schedules.
      */
-    public function getSeminarConflicts(): Collection
+    public function getGroupConflicts(): Collection
     {
-        $seminars = BatchSchedule::with(['batch.organizationalUnit', 'batch.template'])
-            ->where('conflict_group', 'seminar')
+        $grouped = BatchSchedule::with(['batch.organizationalUnit', 'batch.template', 'conflictGroupRef'])
+            ->where(function ($q) {
+                $q->whereNotNull('conflict_group_id')->orWhere('conflict_group', '!=', '');
+            })
             ->orderBy('start_date')
-            ->get();
+            ->get()
+            ->filter(fn (BatchSchedule $s) => $s->isGrouped())
+            ->values();
 
         $conflicts = collect();
 
-        for ($i = 0; $i < $seminars->count(); $i++) {
-            for ($j = $i + 1; $j < $seminars->count(); $j++) {
-                $a = $seminars[$i];
-                $b = $seminars[$j];
+        for ($i = 0; $i < $grouped->count(); $i++) {
+            for ($j = $i + 1; $j < $grouped->count(); $j++) {
+                $a = $grouped[$i];
+                $b = $grouped[$j];
 
                 if ($a->training_batch_id === $b->training_batch_id) {
                     continue;
                 }
 
+                if (! $this->sameGroup($a, $b)) {
+                    continue;
+                }
+
                 if ($this->datesOverlap($a->start_date, $a->end_date, $b->start_date, $b->end_date)) {
-                    $conflicts->push(['a' => $a, 'b' => $b, 'type' => 'seminar']);
+                    $conflicts->push(['a' => $a, 'b' => $b, 'type' => 'group']);
                 }
             }
         }
@@ -87,48 +97,74 @@ class ConflictCheckerService
     }
 
     /**
-     * Check if a new seminar overlaps with existing ones (global, excluding same batch).
+     * Check if a grouped activity overlaps with other batches' activities in the SAME
+     * conflict group (global, excluding same batch). Matches by canonical conflict_group_id
+     * when the schedule has one; falls back to the legacy conflict_group string otherwise —
+     * so pre-canonicalization data keeps working without a backfill.
      */
-    public function hasSeminarConflict(string $startDate, string $endDate, int $batchId, ?int $excludeScheduleId = null): bool
+    public function hasGroupConflict(BatchSchedule $schedule, ?int $excludeScheduleId = null): bool
     {
-        $query = BatchSchedule::where('conflict_group', 'seminar')
-            ->where('training_batch_id', '!=', $batchId)
-            ->whereDate('start_date', '<=', $endDate)
-            ->whereDate('end_date', '>=', $startDate);
+        $query = $this->groupConflictQuery($schedule, $excludeScheduleId);
+
+        return $query !== null && $query->exists();
+    }
+
+    /**
+     * Same matching rule as hasGroupConflict(), but returns the actual conflicting
+     * schedules (used where the caller needs to record/alert on each one, not just
+     * know whether any exist).
+     */
+    public function getConflictingSchedules(BatchSchedule $schedule, ?int $excludeScheduleId = null): Collection
+    {
+        $query = $this->groupConflictQuery($schedule, $excludeScheduleId);
+
+        return $query === null ? collect() : $query->get();
+    }
+
+    private function groupConflictQuery(BatchSchedule $schedule, ?int $excludeScheduleId = null)
+    {
+        if (! $schedule->isGrouped()) {
+            return null; // group membership is explicit — never inferred, never assumed
+        }
+
+        $query = BatchSchedule::where('training_batch_id', '!=', $schedule->training_batch_id)
+            ->where(function ($q) use ($schedule) {
+                if ($schedule->conflict_group_id) {
+                    $q->where('conflict_group_id', $schedule->conflict_group_id);
+                }
+                if (! empty($schedule->conflict_group)) {
+                    $q->orWhere('conflict_group', $schedule->conflict_group);
+                }
+            })
+            ->whereDate('start_date', '<=', $schedule->end_date)
+            ->whereDate('end_date', '>=', $schedule->start_date);
 
         if ($excludeScheduleId) {
             $query->where('id', '!=', $excludeScheduleId);
         }
 
-        return $query->exists();
+        return $query;
     }
 
     public function getAllConflicts(): array
     {
         return [
-            'seminar' => $this->getSeminarConflicts(),
-            'wi'      => $this->getWiConflicts(),
-            'total'   => $this->getSeminarConflicts()->count() + $this->getWiConflicts()->count(),
+            'group' => $this->getGroupConflicts(),
+            'wi'    => $this->getWiConflicts(),
+            'total' => $this->getGroupConflicts()->count() + $this->getWiConflicts()->count(),
         ];
     }
 
     /**
-     * Check if a specific batch currently has any seminar or WI conflicts.
+     * Check if a specific batch currently has any group or WI conflicts.
      */
     public function hasAnyBatchConflict(\App\Models\TrainingBatch $batch): bool
     {
         $batch->loadMissing('schedules.wiAssignments');
 
         foreach ($batch->schedules as $schedule) {
-            if ($schedule->conflict_group === 'seminar') {
-                if ($this->hasSeminarConflict(
-                    $schedule->start_date->toDateString(),
-                    $schedule->end_date->toDateString(),
-                    $batch->id,
-                    $schedule->id
-                )) {
-                    return true;
-                }
+            if ($schedule->isGrouped() && $this->hasGroupConflict($schedule, $schedule->id)) {
+                return true;
             }
 
             foreach ($schedule->wiAssignments as $wi) {
@@ -144,6 +180,15 @@ class ConflictCheckerService
         }
 
         return false;
+    }
+
+    private function sameGroup(BatchSchedule $a, BatchSchedule $b): bool
+    {
+        if ($a->conflict_group_id && $b->conflict_group_id) {
+            return $a->conflict_group_id === $b->conflict_group_id;
+        }
+
+        return ! empty($a->conflict_group) && $a->conflict_group === $b->conflict_group;
     }
 
     private function datesOverlap(Carbon $aStart, Carbon $aEnd, Carbon $bStart, Carbon $bEnd): bool

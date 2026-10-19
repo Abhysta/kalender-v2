@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AnnualCalendarActivity;
 use App\Models\BatchSchedule;
 use App\Models\Holiday;
 use App\Models\OrganizationalUnit;
@@ -58,6 +59,24 @@ class CalendarController extends Controller
 
         $holidays = Holiday::pluck('date')->map(fn($d) => $d->format('Y-m-d'))->flip()->all();
 
-        return view('admin.calendar', compact('events', 'batchList', 'units', 'holidays'));
+        $planEvents = AnnualCalendarActivity::whereNotNull('planned_start_date')
+            ->whereHas('calendar', fn($q) => $q->active())
+            ->with(['calendar', 'trainingBatches'])
+            ->get()
+            // Once linked AND overridden, the real schedule already shows the effective
+            // date — the original plan is superseded, so drop its ghost bar.
+            ->reject(fn($a) => $a->trainingBatches->contains(fn($b) => $b->hasDateOverride()))
+            ->map(fn($a) => [
+                'id'         => $a->id,
+                'name'       => $a->name,
+                'calendar'   => $a->calendar->name,
+                'calendarId' => $a->annual_calendar_id,
+                'start'      => $a->planned_start_date->toDateString(),
+                'end'        => ($a->planned_end_date ?? $a->planned_start_date)->toDateString(),
+                'unitId'     => $a->calendar->organizational_unit_id,
+                'isUsed'     => $a->trainingBatches->isNotEmpty(),
+            ])->values();
+
+        return view('admin.calendar', compact('events', 'batchList', 'units', 'holidays', 'planEvents'));
     }
 }

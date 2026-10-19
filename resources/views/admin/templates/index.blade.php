@@ -119,12 +119,30 @@
                         <span class="inline-flex h-5 px-2 bg-slate-100 text-slate-500 rounded-full text-[10px] font-semibold items-center">Nonaktif</span>
                         @endif
                     </td>
-                    <td class="px-4 py-3 text-right">
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
                         <a href="{{ route('admin.templates.show', $template) }}"
-                           class="inline-flex items-center gap-1 h-7 px-3 bg-sky-50 text-sky-700 border border-sky-200 rounded-lg text-[11px] font-semibold no-underline hover:bg-sky-100 transition-colors">
+                           class="inline-flex items-center gap-1 h-7 px-2.5 bg-sky-50 text-sky-700 border border-sky-200 rounded-lg text-[11px] font-semibold no-underline hover:bg-sky-100 transition-colors mr-1.5">
                             Detail
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
                         </a>
+                        <button type="button" onclick="openEditTemplateModal(this)"
+                           data-id="{{ $template->id }}"
+                           data-action="{{ route('admin.templates.update', $template) }}"
+                           data-code="{{ $template->code }}"
+                           data-name="{{ $template->name }}"
+                           data-unit="{{ $template->organizational_unit_id }}"
+                           data-description="{{ $template->description }}"
+                           data-active="{{ $template->is_active ? '1' : '0' }}"
+                           class="inline-flex items-center justify-center w-7 h-7 bg-slate-50 border border-slate-200 rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200 transition-all cursor-pointer mr-1.5">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <form method="POST" action="{{ route('admin.templates.destroy', $template) }}" class="inline"
+                              onsubmit="return confirmModal(event, 'Hapus template &quot;{{ addslashes($template->name) }}&quot;? Tindakan tidak dapat diurungkan.', true)">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="w-7 h-7 bg-slate-50 border border-slate-200 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all cursor-pointer inline-flex items-center justify-center">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                            </button>
+                        </form>
                     </td>
                 </tr>
                 @endforeach
@@ -133,5 +151,78 @@
     </div>
     @endif
 </main>
+
+<!-- EDIT TEMPLATE MODAL (shared, filled via JS per row) -->
+<div id="editTemplateOverlay" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-[520px] w-full p-6">
+        <div class="flex items-center justify-between mb-5">
+            <h3 class="text-[15px] font-bold text-slate-900">Edit Template</h3>
+            <button type="button" onclick="closeEditTemplateModal()" class="w-7 h-7 flex items-center justify-center bg-transparent border-none text-slate-400 hover:text-slate-600 cursor-pointer">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form id="editTemplateForm" method="POST" class="flex flex-col gap-4">
+            @csrf @method('PUT')
+            <div class="grid grid-cols-2 gap-4 max-[480px]:grid-cols-1">
+                <div>
+                    <label class="block text-[12px] font-semibold text-slate-700 mb-1.5">Kode *</label>
+                    <input type="text" name="code" id="editTplCode" required
+                        class="w-full h-10 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-3 text-sm font-mono text-slate-900 outline-none focus:border-sky-700 focus:bg-white">
+                </div>
+                <div>
+                    <label class="block text-[12px] font-semibold text-slate-700 mb-1.5">Nama *</label>
+                    <input type="text" name="name" id="editTplName" required
+                        class="w-full h-10 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-3 text-sm text-slate-900 outline-none focus:border-sky-700 focus:bg-white">
+                </div>
+            </div>
+            <div>
+                <label class="block text-[12px] font-semibold text-slate-700 mb-1.5">Unit Organisasi</label>
+                <select name="organizational_unit_id" id="editTplUnit"
+                    class="w-full h-10 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-3 text-sm text-slate-900 outline-none focus:border-sky-700 focus:bg-white select-custom">
+                    <option value="">— Semua Unit —</option>
+                    @foreach($units as $unit)
+                    <option value="{{ $unit->id }}">{{ $unit->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-[12px] font-semibold text-slate-700 mb-1.5">Deskripsi</label>
+                <textarea name="description" id="editTplDescription" rows="3"
+                    class="w-full bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-sky-700 focus:bg-white resize-none"></textarea>
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="checkbox" name="is_active" value="1" id="editTplActive" class="accent-sky-700">
+                <label for="editTplActive" class="text-[13px] text-slate-700 cursor-pointer">Template Aktif</label>
+            </div>
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="closeEditTemplateModal()" class="h-10 px-5 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold border-none cursor-pointer hover:bg-slate-200">Batal</button>
+                <button type="submit" class="h-10 px-5 bg-sky-700 text-white rounded-lg text-sm font-bold border-none cursor-pointer hover:bg-sky-600">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditTemplateModal(btn) {
+    const overlay = document.getElementById('editTemplateOverlay');
+    document.getElementById('editTemplateForm').action = btn.dataset.action;
+    document.getElementById('editTplCode').value = btn.dataset.code;
+    document.getElementById('editTplName').value = btn.dataset.name;
+    document.getElementById('editTplUnit').value = btn.dataset.unit || '';
+    document.getElementById('editTplDescription').value = btn.dataset.description || '';
+    document.getElementById('editTplActive').checked = btn.dataset.active === '1';
+    overlay.classList.remove('hidden');
+    overlay.classList.add('flex');
+}
+function closeEditTemplateModal() {
+    const overlay = document.getElementById('editTemplateOverlay');
+    overlay.classList.add('hidden');
+    overlay.classList.remove('flex');
+}
+document.getElementById('editTemplateOverlay').addEventListener('click', e => {
+    if (e.target.id === 'editTemplateOverlay') closeEditTemplateModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeEditTemplateModal(); });
+</script>
 </body>
 </html>

@@ -10,7 +10,7 @@
 
 <!-- NAVBAR -->
 <nav class="sticky top-0 z-50 bg-white/[0.92] backdrop-blur-md border-b border-slate-200 px-6 h-16 flex items-center gap-5 max-[640px]:px-4 max-[640px]:gap-3 max-[480px]:px-3" id="navbar">
-    <a href="/" class="flex items-center gap-2.5 no-underline shrink-0">
+    <a href="{{ route('login') }}" class="flex items-center gap-2.5 no-underline shrink-0">
         <div class="w-9 h-9 bg-sky-700 rounded-lg flex items-center justify-center">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -26,14 +26,14 @@
     </a>
 
     <nav class="flex items-center gap-1" aria-label="Menu utama">
-        <a href="/catalog" class="nav-link">
+        <a href="{{ route('public.catalog') }}" class="nav-link">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                 <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
             <span class="max-[480px]:hidden">Katalog</span>
         </a>
-        <a href="/calendar" class="nav-link active" aria-current="page">
+        <a href="{{ route('public.calendar') }}" class="nav-link active" aria-current="page">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                 <line x1="16" y1="2" x2="16" y2="6"/>
@@ -44,7 +44,7 @@
         </a>
     </nav>
 
-    <a href="/" class="ml-auto inline-flex items-center gap-1.5 h-[34px] px-3.5 bg-sky-700 text-white rounded-lg text-[12px] font-semibold no-underline shrink-0 transition-all duration-150 hover:bg-sky-600 hover:shadow-[0_4px_12px_rgba(3,105,161,.3)]">
+    <a href="{{ route('login') }}" class="ml-auto inline-flex items-center gap-1.5 h-[34px] px-3.5 bg-sky-700 text-white rounded-lg text-[12px] font-semibold no-underline shrink-0 transition-all duration-150 hover:bg-sky-600 hover:shadow-[0_4px_12px_rgba(3,105,161,.3)]">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -187,7 +187,7 @@ function buildSidebar() {
                 </div>
             </div>
         </div>
-        <a href="/catalog" style="display:flex;align-items:center;gap:6px;font-size:12px;color:#0369a1;text-decoration:none;padding:4px 2px;margin-top:4px;cursor:pointer;">
+        <a href="{{ route('public.catalog') }}" style="display:flex;align-items:center;gap:6px;font-size:12px;color:#0369a1;text-decoration:none;padding:4px 2px;margin-top:4px;cursor:pointer;">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
             Kembali ke Katalog
         </a>`;

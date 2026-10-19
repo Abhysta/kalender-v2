@@ -93,6 +93,10 @@
         .event-bar.end { border-radius:0 3px 3px 0; }
         .event-bar.single { border-radius:3px; }
         .event-bar.conflict-alert { opacity:.55; background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.12) 0,rgba(0,0,0,.12) 2px,transparent 2px,transparent 6px) !important; outline:1.5px solid rgba(245,158,11,.7); outline-offset:-1px; }
+        .event-bar.plan { opacity:.4; border:1px dashed rgba(100,116,139,.6); box-shadow:none; }
+        .event-bar.plan:hover { opacity:.6; }
+        .plan-toggle { display:flex; align-items:center; gap:6px; height:32px; padding:0 10px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface); font-size:12px; color:var(--secondary); cursor:pointer; user-select:none; }
+        .plan-toggle input { accent-color:var(--cta); cursor:pointer; }
         .more-events { font-size:9px; color:var(--muted); font-weight:500; padding:0 3px; cursor:pointer; }
         .more-events:hover { color:var(--cta); }
         .tooltip { position:fixed; z-index:100; background:var(--primary); color:#fff; border-radius:10px; padding:10px 14px; font-size:11px; line-height:1.5; pointer-events:none; box-shadow:0 8px 24px rgba(15,23,42,.25); max-width:240px; opacity:0; transition:opacity 150ms ease; }
@@ -171,7 +175,7 @@
     </nav>
 
     <div class="navbar-actions">
-        <form action="/logout" method="POST" style="display:contents">
+        <form action="{{ route('logout') }}" method="POST" style="display:contents">
             @csrf
             <button type="submit" class="logout-btn">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -230,6 +234,10 @@
                     @endforeach
                 </select>
                 @endif
+                <label class="plan-toggle">
+                    <input type="checkbox" id="planToggle" checked>
+                    Rencana Tahunan
+                </label>
                 <a href="{{ route('admin.conflicts.index') }}" class="conflict-badge no-conflict" id="conflictBadge">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                     <span id="conflictText">Tidak ada konflik</span>
@@ -261,10 +269,19 @@ import { animate, stagger } from 'https://esm.sh/animejs@4';
 const MONTHS_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const DAYS_ID   = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
 
-const events    = @json($events);
-const batchList = @json($batchList);
-const holidays  = @json($holidays); // { 'YYYY-MM-DD': 0, ... } keyed set for O(1) lookup
+const events     = @json($events);
+const batchList  = @json($batchList);
+const holidays   = @json($holidays); // { 'YYYY-MM-DD': 0, ... } keyed set for O(1) lookup
+const planEvents = @json($planEvents);
+const batchShowUrl = @json(route('admin.batches.show', ['batch' => '__ID__']));
+const annualCalendarShowUrl = @json(route('admin.annual-calendars.show', ['calendar' => '__ID__']));
 const conflictBatchIds = new Set(batchList.filter(b => b.conflictAlert).map(b => b.id));
+
+let showPlans = true;
+document.getElementById('planToggle').addEventListener('change', e => {
+    showPlans = e.target.checked;
+    renderCalendar();
+});
 
 const params     = new URLSearchParams(location.search);
 const focusBatch = params.get('batch') ? parseInt(params.get('batch')) : null;
@@ -437,6 +454,31 @@ function renderCalendar(animDir=0) {
         }
     });
 
+    // Annual calendar plan overlay — advisory range, no working-day skip.
+    const planEventsOnDay = {};
+    if (showPlans) {
+        const unitVal = document.getElementById('calUnitFilter')?.value || '';
+        planEvents
+            .filter(p => !unitVal || String(p.unitId) === unitVal)
+            .forEach(p => {
+                const s = new Date(p.start+'T00:00:00');
+                const e = new Date(p.end+'T00:00:00');
+                let cur = new Date(s);
+                while (cur <= e) {
+                    const key = dateKey(cur);
+                    if (!planEventsOnDay[key]) planEventsOnDay[key] = [];
+                    const isStart  = cur.getTime() === s.getTime();
+                    const isEnd    = cur.getTime() === e.getTime();
+                    planEventsOnDay[key].push({
+                        p,
+                        segment: isStart && isEnd ? 'single' : isStart ? 'start' : isEnd ? 'end' : 'mid',
+                        showLabel: isStart,
+                    });
+                    cur = new Date(cur.getTime() + 86400000);
+                }
+            });
+    }
+
     const badge = document.getElementById('conflictBadge');
     if (hasAlert) {
         badge.className = 'conflict-badge has-conflict';
@@ -475,11 +517,20 @@ function renderCalendar(animDir=0) {
             const extra       = evs.filter(ev => ev.pos > 3).length;
             const holidayHtml = isHoliday ? `<div class="holiday-dot" title="Hari Libur"></div>` : '';
 
+            const plansHere  = planEventsOnDay[key] || [];
+            const planHtml   = plansHere.slice(0, 2).map(pl => {
+                const lbl = pl.showLabel ? pl.p.name : '';
+                return `<div class="event-bar plan ${pl.segment}" style="background:#64748B;color:#fff" data-plan-id="${pl.p.id}">${lbl}</div>`;
+            }).join('');
+            const planExtra  = plansHere.length > 2 ? `<div class="more-events">+${plansHere.length-2} rencana</div>` : '';
+
             return `<div class="cal-cell${cell.other?' other-month':''}${isToday?' today':''}${isWknd?' weekend':''}${isHoliday?' holiday':''}">
                 <div class="cell-num">${cell.day}${holidayHtml}</div>
                 <div class="cell-events">
                     ${evHtml}
                     ${extra > 0 ? `<div class="more-events">+${extra}</div>` : ''}
+                    ${planHtml}
+                    ${planExtra}
                 </div>
             </div>`;
         }).join('')
@@ -517,7 +568,29 @@ function renderCalendar(animDir=0) {
         bar.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
         bar.addEventListener('click', () => {
             const ev = events.find(x => x.id === parseInt(bar.dataset.id));
-            if (ev) window.location.href = `/admin/batches/${ev.batchId}`;
+            if (ev) window.location.href = batchShowUrl.replace('__ID__', ev.batchId);
+        });
+    });
+
+    weeksEl.querySelectorAll('.event-bar.plan').forEach(bar => {
+        bar.addEventListener('mouseenter', e => {
+            const pl = planEvents.find(x => x.id === parseInt(bar.dataset.planId));
+            if (!pl) return;
+            document.getElementById('ttTitle').textContent = `${pl.name} (Rencana)`;
+            document.getElementById('ttBatch').innerHTML =
+                `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${pl.calendar}`;
+            document.getElementById('ttDate').innerHTML =
+                `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${shortDate(pl.start)} – ${shortDate(pl.end)}${pl.isUsed ? ' · sudah dipakai di Sequence' : ' · belum dipakai'}`;
+            document.getElementById('ttUnit').style.display = 'none';
+            document.getElementById('ttWis').style.display = 'none';
+            tooltip.style.opacity = '1';
+            posTooltip(e);
+        });
+        bar.addEventListener('mousemove', posTooltip);
+        bar.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
+        bar.addEventListener('click', () => {
+            const pl = planEvents.find(x => x.id === parseInt(bar.dataset.planId));
+            if (pl) window.location.href = annualCalendarShowUrl.replace('__ID__', pl.calendarId);
         });
     });
 }

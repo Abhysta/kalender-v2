@@ -9,6 +9,22 @@
         .phase-row:hover { background: #f8fafc; }
         .color-dot { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
         .tag { height:20px; padding:0 7px; border-radius:100px; font-size:10px; font-weight:600; display:inline-flex; align-items:center; }
+        .drop-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 28px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 200ms, background 200ms;
+            background: #f8fafc;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: #0369a1;
+            background: #f0f9ff;
+        }
+        .drop-zone input[type=file] {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+        }
     </style>
 </head>
 <body class="font-sans bg-slate-50 text-slate-950 min-h-screen">
@@ -32,13 +48,6 @@
                         {{ $template->is_active ? 'Aktif' : 'Nonaktif' }}
                     </span>
                 </div>
-            </div>
-            <div class="flex gap-2">
-                <a href="{{ route('admin.templates.edit', $template) }}"
-                   class="inline-flex items-center gap-1.5 h-9 px-4 bg-white/10 border border-white/20 text-white rounded-lg text-[12px] font-semibold no-underline hover:bg-white/20 transition-colors">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    Edit Template
-                </a>
             </div>
         </div>
         <div class="flex gap-4 mt-5 flex-wrap">
@@ -70,13 +79,66 @@
     @endif
 
     <!-- PHASES LIST -->
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <h2 class="text-base font-bold text-slate-900">Phase Pelatihan</h2>
-        <button onclick="document.getElementById('addPhaseForm').classList.toggle('hidden')"
-            class="inline-flex items-center gap-1.5 h-8 px-3 bg-sky-700 text-white rounded-lg text-[12px] font-semibold border-none cursor-pointer hover:bg-sky-600 transition-colors">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Tambah Phase
-        </button>
+        <div class="flex gap-2">
+            <button onclick="document.getElementById('importPhaseForm').classList.toggle('hidden'); document.getElementById('addPhaseForm').classList.add('hidden')"
+                class="inline-flex items-center gap-1.5 h-8 px-3 bg-white border border-slate-200 text-slate-700 rounded-lg text-[12px] font-semibold cursor-pointer hover:border-sky-300 hover:text-sky-700 transition-colors">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Import Excel/CSV
+            </button>
+            <button onclick="document.getElementById('addPhaseForm').classList.toggle('hidden'); document.getElementById('importPhaseForm').classList.add('hidden')"
+                class="inline-flex items-center gap-1.5 h-8 px-3 bg-sky-700 text-white rounded-lg text-[12px] font-semibold border-none cursor-pointer hover:bg-sky-600 transition-colors">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Tambah Phase
+            </button>
+        </div>
+    </div>
+
+    <!-- IMPORT PHASES FROM EXCEL/CSV -->
+    <div id="importPhaseForm" class="hidden mb-5">
+        <form method="POST" action="{{ route('admin.templates.phases.import', $template) }}" enctype="multipart/form-data"
+              class="bg-white border border-sky-200 rounded-xl p-5 flex flex-col gap-4">
+            @csrf
+            <div class="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                    <h3 class="text-[13px] font-bold text-slate-800">Import Phase dari Excel/CSV</h3>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Ditambahkan di akhir urutan yang sudah ada — phase lain tidak terhapus. Kolom wajib: <span class="font-mono">name</span>, <span class="font-mono">duration</span>.</p>
+                </div>
+                <a href="{{ route('admin.templates.download-csv') }}"
+                   class="inline-flex items-center gap-1.5 h-7 px-3 bg-green-50 text-green-700 border border-green-200 rounded-lg text-[11px] font-semibold no-underline hover:bg-green-100 transition-colors shrink-0">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Unduh Template CSV
+                </a>
+            </div>
+
+            <div class="drop-zone relative" id="phaseDropZone">
+                <input type="file" name="file" id="phaseFileInput" accept=".csv,.txt,.xlsx,.xls" required>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto mb-2 text-slate-400">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <p class="text-[12px] text-slate-600 font-semibold mb-1">Drag & drop file di sini</p>
+                <p class="text-[11px] text-slate-400">atau klik untuk pilih file — .csv, .xlsx, .xls (max 2MB)</p>
+                <div id="phaseFileName" class="mt-2 text-[12px] text-sky-700 font-semibold hidden"></div>
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="document.getElementById('importPhaseForm').classList.add('hidden')"
+                    class="h-9 px-4 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-semibold border-none cursor-pointer hover:bg-slate-200">Batal</button>
+                <button type="submit" class="inline-flex items-center gap-1.5 h-9 px-4 bg-sky-700 text-white rounded-lg text-[12px] font-bold border-none cursor-pointer hover:bg-sky-600">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Import
+                </button>
+            </div>
+        </form>
     </div>
 
     <!-- ADD PHASE FORM -->
@@ -149,10 +211,6 @@
                         <input type="checkbox" name="is_alert" value="1" class="accent-sky-700">
                         Alert
                     </label>
-                    <label class="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer">
-                        <input type="checkbox" name="can_manual_edit" value="1" class="accent-sky-700">
-                        Edit Manual
-                    </label>
                 </div>
             </div>
             <div class="flex gap-2 justify-end pt-1 border-t border-slate-100">
@@ -213,18 +271,96 @@
                     </td>
                     <td class="px-3 py-3 text-center max-[768px]:hidden">
                         @if($phase->is_alert)<span class="tag bg-red-100 text-red-600">Alert</span>@endif
-                        @if($phase->can_manual_edit)<span class="tag bg-green-100 text-green-700 ml-1">Edit</span>@endif
                         @if(($phase->work_days ?? 5) > 5)<span class="tag bg-amber-100 text-amber-700 ml-1">{{ $phase->work_days }}hr</span>@endif
                     </td>
                     <td class="px-3 py-3 text-center">
                         <div class="color-dot mx-auto" style="background:{{ $phase->color }}"></div>
                     </td>
-                    <td class="px-3 py-3 text-right">
-                        <form method="POST" action="{{ route('admin.templates.phases.destroy', [$template, $phase]) }}" onsubmit="return confirm('Hapus phase ini?')">
+                    <td class="px-3 py-3 text-right whitespace-nowrap">
+                        <button type="button" onclick="toggleEditRow({{ $phase->id }})"
+                            class="w-7 h-7 bg-slate-50 border border-slate-200 rounded-lg text-slate-400 hover:bg-sky-50 hover:text-sky-600 hover:border-sky-200 transition-all cursor-pointer inline-flex items-center justify-center">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <form method="POST" action="{{ route('admin.templates.phases.destroy', [$template, $phase]) }}" onsubmit="return confirmModal(event, 'Hapus phase ini?', true)" class="inline">
                             @csrf @method('DELETE')
-                            <button type="submit" class="w-7 h-7 bg-slate-50 border border-slate-200 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all cursor-pointer flex items-center justify-center">
+                            <button type="submit" class="w-7 h-7 bg-slate-50 border border-slate-200 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all cursor-pointer inline-flex items-center justify-center">
                                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                             </button>
+                        </form>
+                    </td>
+                </tr>
+                <tr id="editRow{{ $phase->id }}" class="hidden bg-sky-50/60">
+                    <td colspan="8" class="px-6 py-4">
+                        <form method="POST" action="{{ route('admin.templates.phases.update', [$template, $phase]) }}" class="grid grid-cols-4 gap-3 max-[768px]:grid-cols-2">
+                            @csrf @method('PUT')
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 mb-1">Nama Phase *</label>
+                                <input type="text" name="name" value="{{ $phase->name }}" required
+                                    class="w-full h-8 bg-white border border-slate-200 rounded-lg px-2.5 text-[12px] text-slate-900 outline-none focus:border-sky-700">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 mb-1">Urutan *</label>
+                                <input type="number" name="sequence" value="{{ $phase->sequence }}" min="0" required
+                                    class="w-full h-8 bg-white border border-slate-200 rounded-lg px-2.5 text-[12px] font-mono text-slate-900 outline-none focus:border-sky-700">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 mb-1">Durasi *</label>
+                                <input type="number" name="duration" value="{{ $phase->duration }}" min="1" required
+                                    class="w-full h-8 bg-white border border-slate-200 rounded-lg px-2.5 text-[12px] font-mono text-slate-900 outline-none focus:border-sky-700">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 mb-1">Satuan</label>
+                                <select name="duration_unit" class="w-full h-8 bg-white border border-slate-200 rounded-lg px-2 text-[12px] text-slate-900 outline-none focus:border-sky-700 select-custom">
+                                    <option value="day" {{ $phase->duration_unit === 'day' ? 'selected' : '' }}>Hari</option>
+                                    <option value="hour" {{ $phase->duration_unit === 'hour' ? 'selected' : '' }}>Jam</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 mb-1">Offset Hari</label>
+                                <input type="number" name="offset_days" value="{{ $phase->offset_days }}"
+                                    class="w-full h-8 bg-white border border-slate-200 rounded-lg px-2.5 text-[12px] font-mono text-slate-900 outline-none focus:border-sky-700">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 mb-1">Jenis Hari</label>
+                                <select name="day_type" class="w-full h-8 bg-white border border-slate-200 rounded-lg px-2 text-[12px] text-slate-900 outline-none focus:border-sky-700 select-custom">
+                                    <option value="working_day" {{ $phase->day_type === 'working_day' ? 'selected' : '' }}>Hari Kerja</option>
+                                    <option value="calendar_day" {{ $phase->day_type === 'calendar_day' ? 'selected' : '' }}>Hari Kalender</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 mb-1">Hari Kerja / Minggu</label>
+                                <select name="work_days" class="w-full h-8 bg-white border border-slate-200 rounded-lg px-2 text-[12px] text-slate-900 outline-none focus:border-sky-700 select-custom">
+                                    @foreach([5 => '5 hari (Sen–Jum)', 6 => '6 hari (Sen–Sab)', 7 => '7 hari (termasuk Minggu)'] as $wd => $label)
+                                    <option value="{{ $wd }}" {{ (int) $phase->work_days === $wd ? 'selected' : '' }}>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 mb-1">Jenis Aktivitas</label>
+                                <input type="text" name="activity_type" value="{{ $phase->activity_type }}" placeholder="seminar/classroom"
+                                    class="w-full h-8 bg-white border border-slate-200 rounded-lg px-2.5 text-[12px] text-slate-900 outline-none focus:border-sky-700">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 mb-1">Conflict Group</label>
+                                <input type="text" name="conflict_group" value="{{ $phase->conflict_group }}" placeholder="seminar"
+                                    class="w-full h-8 bg-white border border-slate-200 rounded-lg px-2.5 text-[12px] text-slate-900 outline-none focus:border-sky-700">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-500 mb-1">Warna</label>
+                                <input type="color" name="color" value="{{ $phase->color ?: '#0369A1' }}"
+                                    class="w-full h-8 bg-white border border-slate-200 rounded-lg px-1.5 cursor-pointer">
+                            </div>
+                            <div class="flex items-end pb-1">
+                                <label class="flex items-center gap-2 text-[12px] text-slate-600 cursor-pointer">
+                                    <input type="checkbox" name="is_alert" value="1" class="accent-sky-700" {{ $phase->is_alert ? 'checked' : '' }}>
+                                    Alert
+                                </label>
+                            </div>
+                            <div class="col-span-4 max-[768px]:col-span-2 flex gap-2 justify-end pt-1 border-t border-slate-100">
+                                <button type="button" onclick="toggleEditRow({{ $phase->id }})"
+                                    class="h-8 px-4 bg-slate-100 text-slate-600 rounded-lg text-[12px] font-semibold border-none cursor-pointer hover:bg-slate-200">Batal</button>
+                                <button type="submit" class="h-8 px-4 bg-sky-700 text-white rounded-lg text-[12px] font-bold border-none cursor-pointer hover:bg-sky-600">Simpan</button>
+                            </div>
                         </form>
                     </td>
                 </tr>
@@ -254,5 +390,37 @@
     </div>
     @endif
 </main>
+<script>
+function toggleEditRow(id) {
+    const row = document.getElementById('editRow' + id);
+    if (row) row.classList.toggle('hidden');
+}
+
+const phaseInput = document.getElementById('phaseFileInput');
+const phaseZone  = document.getElementById('phaseDropZone');
+const phaseLabel = document.getElementById('phaseFileName');
+
+if (phaseInput && phaseZone) {
+    phaseInput.addEventListener('change', () => {
+        if (phaseInput.files[0]) {
+            phaseLabel.textContent = '✓ ' + phaseInput.files[0].name;
+            phaseLabel.classList.remove('hidden');
+        }
+    });
+    phaseZone.addEventListener('dragover', e => { e.preventDefault(); phaseZone.classList.add('drag-over'); });
+    phaseZone.addEventListener('dragleave', () => phaseZone.classList.remove('drag-over'));
+    phaseZone.addEventListener('drop', e => {
+        e.preventDefault();
+        phaseZone.classList.remove('drag-over');
+        if (e.dataTransfer.files[0]) {
+            const dt = new DataTransfer();
+            dt.items.add(e.dataTransfer.files[0]);
+            phaseInput.files = dt.files;
+            phaseLabel.textContent = '✓ ' + e.dataTransfer.files[0].name;
+            phaseLabel.classList.remove('hidden');
+        }
+    });
+}
+</script>
 </body>
 </html>

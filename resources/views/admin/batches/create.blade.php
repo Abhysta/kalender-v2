@@ -54,6 +54,22 @@
             </div>
         </div>
 
+        @if($activities->isNotEmpty())
+        <div>
+            <label class="block text-[12px] font-semibold text-slate-700 mb-1.5">Hubungkan ke Kegiatan Kalender Tahunan (opsional)</label>
+            <select name="annual_calendar_activity_id" id="activitySelect"
+                class="w-full h-10 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-3 text-sm text-slate-900 outline-none focus:border-sky-700 focus:bg-white select-custom">
+                <option value="">— Tidak pakai Kalender Tahunan —</option>
+                @foreach($activities as $a)
+                <option value="{{ $a->id }}" data-unit="{{ $a->calendar->organizational_unit_id }}" data-start="{{ $a->planned_start_date?->format('Y-m-d') }}" {{ old('annual_calendar_activity_id') == $a->id ? 'selected' : '' }}>
+                    {{ $a->calendar->name }} — {{ $a->name }}@if($a->planned_start_date) ({{ $a->planned_start_date->format('d M Y') }})@endif
+                </option>
+                @endforeach
+            </select>
+            <p class="text-[11px] text-slate-400 mt-1">Kalau dipilih dan sudah punya tanggal rencana, Tanggal Mulai otomatis terisi — tetap bisa diubah manual. Kalender Tahunan bersifat opsional, boleh dikosongkan.</p>
+        </div>
+        @endif
+
         <div class="grid grid-cols-2 gap-4 max-[480px]:grid-cols-1">
             <div>
                 <label class="block text-[12px] font-semibold text-slate-700 mb-1.5">Tanggal Mulai *</label>
@@ -91,5 +107,30 @@
         </div>
     </form>
 </main>
+<script>
+    const activitySelect = document.getElementById('activitySelect');
+    const startDateInput = document.querySelector('input[name="start_date"]');
+    const unitSelect     = document.querySelector('select[name="organizational_unit_id"]');
+
+    if (activitySelect) {
+        activitySelect.addEventListener('change', function () {
+            const opt   = this.options[this.selectedIndex];
+            const start = opt?.dataset.start;
+            if (start) startDateInput.value = start;
+        });
+    }
+
+    if (activitySelect && unitSelect) {
+        const filterByUnit = () => {
+            const unitVal = unitSelect.value;
+            [...activitySelect.options].forEach(opt => {
+                if (!opt.value) return; // keep placeholder always visible
+                opt.hidden = unitVal !== '' && opt.dataset.unit !== '' && opt.dataset.unit !== unitVal;
+            });
+        };
+        unitSelect.addEventListener('change', filterByUnit);
+        filterByUnit();
+    }
+</script>
 </body>
 </html>

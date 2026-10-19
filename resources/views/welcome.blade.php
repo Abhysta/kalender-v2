@@ -42,14 +42,14 @@
                 Lihat katalog pelatihan dan kalender jadwal tanpa perlu membuat akun.
             </div>
             <div class="flex gap-2.5 flex-wrap items-center max-[600px]:gap-2">
-                <a href="/catalog" class="inline-flex items-center gap-2 h-11 px-[22px] bg-white text-slate-900 rounded-[10px] text-sm font-bold no-underline border-none cursor-pointer shadow-[0_4px_16px_rgba(0,0,0,.2)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,.28)] max-[600px]:text-[13px] max-[600px]:px-[18px]">
+                <a href="{{ route('public.catalog') }}" class="inline-flex items-center gap-2 h-11 px-[22px] bg-white text-slate-900 rounded-[10px] text-sm font-bold no-underline border-none cursor-pointer shadow-[0_4px_16px_rgba(0,0,0,.2)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,.28)] max-[600px]:text-[13px] max-[600px]:px-[18px]">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                         <polyline points="9 22 9 12 15 12 15 22"/>
                     </svg>
                     Lihat Katalog
                 </a>
-                <a href="/calendar" class="inline-flex items-center gap-1.5 h-11 px-4 bg-white/[0.08] border border-white/[0.18] text-white/85 rounded-[10px] text-[13px] font-medium no-underline cursor-pointer transition-all duration-180 hover:bg-white/15 hover:text-white">
+                <a href="{{ route('public.calendar') }}" class="inline-flex items-center gap-1.5 h-11 px-4 bg-white/[0.08] border border-white/[0.18] text-white/85 rounded-[10px] text-[13px] font-medium no-underline cursor-pointer transition-all duration-180 hover:bg-white/15 hover:text-white">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="4" width="18" height="18" rx="2"/>
                         <line x1="16" y1="2" x2="16" y2="6"/>
@@ -87,7 +87,7 @@
         </div>
         @endif
 
-        <form method="POST" action="/login" id="loginForm">
+        <form method="POST" action="{{ route('login.submit') }}" id="loginForm">
             @csrf
 
             <div class="mb-[18px]">

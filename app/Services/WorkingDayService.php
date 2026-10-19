@@ -86,6 +86,21 @@ class WorkingDayService
         return $current;
     }
 
+    /**
+     * End date for an activity of $durationDays starting at $start, honoring day_type/work_days.
+     * $durationDays counts the activity's own length (1 = single day, start === end).
+     */
+    public function computeEndDate(Carbon $start, int $durationDays, string $dayType, int $workDays = 5): Carbon
+    {
+        if ($durationDays <= 1) {
+            return $start->copy();
+        }
+
+        return $dayType === 'working_day'
+            ? $this->addWorkingDays($start, $durationDays - 1, $workDays)
+            : $this->addCalendarDays($start, $durationDays - 1);
+    }
+
     public function nextWorkingDay(Carbon $date, int $workDays = 5): Carbon
     {
         $d = $date->copy();

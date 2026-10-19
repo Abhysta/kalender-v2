@@ -12,7 +12,7 @@ class BatchSchedule extends Model
         'training_batch_id', 'template_phase_id', 'name', 'start_date', 'end_date',
         'sequence', 'activity_type', 'conflict_group', 'color',
         'is_locked', 'is_manual', 'is_alert', 'notes', 'generated_by',
-        'is_anchor', 'recalculation_source', 'recalculated_at',
+        'is_anchor', 'recalculation_source', 'recalculated_at', 'conflict_group_id',
     ];
 
     protected function casts(): array
@@ -41,5 +41,16 @@ class BatchSchedule extends Model
     public function wiAssignments(): HasMany
     {
         return $this->hasMany(WiAssignment::class);
+    }
+
+    public function conflictGroupRef(): BelongsTo
+    {
+        return $this->belongsTo(ConflictGroup::class, 'conflict_group_id');
+    }
+
+    /** Does this activity belong to any conflict group at all (canonical FK or legacy string)? */
+    public function isGrouped(): bool
+    {
+        return $this->conflict_group_id !== null || ! empty($this->conflict_group);
     }
 }

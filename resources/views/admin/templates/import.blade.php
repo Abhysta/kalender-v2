@@ -160,9 +160,7 @@
                         ['offset_days','0 = berurutan, -1 = H-1','optional','#f1f5f9','#475569'],
                         ['activity_type','seminar/classroom/ojt dll','optional','#f1f5f9','#475569'],
                         ['conflict_group','seminar (global conflict)','optional','#f1f5f9','#475569'],
-                        ['color','HEX (#0369A1)','optional','#f1f5f9','#475569'],
                         ['is_alert','1 / 0','optional','#f1f5f9','#475569'],
-                        ['can_manual_edit','1 / 0','optional','#f1f5f9','#475569'],
                     ];
                     @endphp
                     @foreach($cols as [$col, $desc, $req, $bg, $fg])
@@ -172,6 +170,7 @@
                     </div>
                     @endforeach
                 </div>
+                <p class="text-[10px] text-slate-400 mt-3">Warna kalender tiap phase ditentukan otomatis oleh sistem (acak), tidak perlu diisi di file.</p>
             </div>
 
             <div class="bg-slate-900 rounded-xl p-4">

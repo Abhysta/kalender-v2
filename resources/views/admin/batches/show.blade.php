@@ -43,7 +43,7 @@
                     </button>
                 </form>
                 @elseif($batch->status === 'generated')
-                <form method="POST" action="{{ route('admin.batches.generate', $batch) }}" onsubmit="return confirm('Re-generate akan menghapus jadwal yang belum di-lock. Lanjutkan?')">
+                <form method="POST" action="{{ route('admin.batches.generate', $batch) }}" onsubmit="return confirmModal(event, 'Re-generate akan menghapus jadwal yang belum di-lock. Lanjutkan?')">
                     @csrf
                     <button type="submit" class="inline-flex items-center gap-1.5 h-9 px-4 bg-white/10 border border-white/20 text-white rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-white/20">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -51,7 +51,7 @@
                     </button>
                 </form>
                 @endif
-                <form method="POST" action="{{ route('admin.batches.destroy', $batch) }}" onsubmit="return confirm('Hapus batch ini beserta semua jadwalnya?')">
+                <form method="POST" action="{{ route('admin.batches.destroy', $batch) }}" onsubmit="return confirmModal(event, 'Hapus batch ini beserta semua jadwalnya?', true)">
                     @csrf @method('DELETE')
                     <button type="submit" class="inline-flex items-center gap-1.5 h-9 px-4 bg-red-500/20 border border-red-400/30 text-red-300 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-red-500/30">
                         Hapus
@@ -119,6 +119,77 @@
         </form>
     </div>
     @endif
+
+    @php
+        $activity = $batch->annualCalendarActivity;
+        $effectiveSource = $batch->hasDateOverride() ? 'override' : ($activity?->hasPlannedDate() ? 'plan' : 'manual');
+    @endphp
+    <div class="bg-white border border-slate-200 rounded-xl p-5 mb-5">
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <h3 class="text-sm font-bold text-slate-900">Kalender Tahunan (opsional)</h3>
+            <span class="inline-flex items-center gap-1 h-5 px-2 rounded-full text-[10px] font-semibold
+                {{ $effectiveSource === 'override' ? 'bg-amber-100 text-amber-700' : ($effectiveSource === 'plan' ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-600') }}">
+                Tanggal efektif dari: {{ ['override' => 'Override Sequence', 'plan' => 'Rencana Kalender Tahunan', 'manual' => 'Tanggal Batch (manual)'][$effectiveSource] }}
+            </span>
+        </div>
+
+        @if($activity)
+        <div class="flex items-center justify-between gap-3 flex-wrap bg-slate-50 rounded-lg px-4 py-3 mb-3">
+            <div class="text-[12px] text-slate-700">
+                Terhubung ke kegiatan <span class="font-semibold">{{ $activity->name }}</span> ({{ $activity->calendar->name }})
+                @if($activity->hasPlannedDate())
+                — rencana awal: <span class="font-mono">{{ $activity->planned_start_date->format('d M Y') }}@if($activity->planned_end_date) – {{ $activity->planned_end_date->format('d M Y') }}@endif</span>
+                @else
+                — <span class="italic text-slate-400">belum ada tanggal rencana</span>
+                @endif
+            </div>
+            <form method="POST" action="{{ route('admin.batches.unlink-activity', $batch) }}" onsubmit="return confirmModal(event, 'Lepaskan hubungan ke kalender tahunan? Tanggal batch saat ini tidak berubah.')">
+                @csrf @method('DELETE')
+                <button type="submit" class="text-[11px] text-red-500 hover:text-red-700 bg-transparent border-none cursor-pointer">Lepaskan</button>
+            </form>
+        </div>
+        @elseif($activities->isNotEmpty())
+        <form method="POST" action="{{ route('admin.batches.link-activity', $batch) }}" class="flex items-end gap-2 flex-wrap mb-3">
+            @csrf
+            <div class="flex-1 min-w-[220px]">
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Hubungkan ke kegiatan Kalender Tahunan</label>
+                <select name="annual_calendar_activity_id" required class="w-full h-9 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-3 text-[12px] text-slate-900 outline-none focus:border-sky-700 select-custom">
+                    <option value="">— Pilih Kegiatan —</option>
+                    @foreach($activities as $a)
+                    <option value="{{ $a->id }}">{{ $a->calendar->name }} — {{ $a->name }}@if($a->hasPlannedDate()) ({{ $a->planned_start_date->format('d M Y') }})@endif</option>
+                    @endforeach
+                </select>
+            </div>
+            <button type="submit" class="h-9 px-4 bg-sky-700 text-white rounded-lg text-[12px] font-semibold border-none cursor-pointer hover:bg-sky-600">Hubungkan</button>
+        </form>
+        @else
+        <p class="text-[12px] text-slate-400 italic mb-3">Belum ada kegiatan kalender tahunan yang tersedia untuk unit ini.</p>
+        @endif
+
+        <div class="border-t border-slate-100 pt-3">
+            <div class="flex items-center justify-between mb-2">
+                <label class="text-[11px] font-semibold text-slate-600">Override Tanggal Sequence</label>
+                @if($batch->hasDateOverride())
+                <form method="POST" action="{{ route('admin.batches.override.clear', $batch) }}" onsubmit="return confirmModal(event, 'Hapus override? Tanggal kembali ke rencana kalender tahunan / tanggal batch sebelumnya.')">
+                    @csrf @method('DELETE')
+                    <button type="submit" class="text-[11px] text-red-500 hover:text-red-700 bg-transparent border-none cursor-pointer">Hapus Override</button>
+                </form>
+                @endif
+            </div>
+            <form method="POST" action="{{ route('admin.batches.override.set', $batch) }}" class="flex items-end gap-2 flex-wrap">
+                @csrf
+                <div>
+                    <label class="block text-[10px] text-slate-500 mb-1">Tanggal Mulai</label>
+                    <input type="date" name="override_start_date" value="{{ $batch->override_start_date?->format('Y-m-d') }}" required
+                        class="h-9 bg-slate-50 border-[1.5px] border-slate-200 rounded-lg px-2.5 text-[12px] font-mono text-slate-900 outline-none focus:border-sky-700">
+                </div>
+                <button type="submit" class="h-9 px-4 bg-amber-500 text-white rounded-lg text-[12px] font-semibold border-none cursor-pointer hover:bg-amber-400">
+                    {{ $batch->hasDateOverride() ? 'Ubah Override' : 'Set Override' }}
+                </button>
+            </form>
+            <p class="text-[11px] text-slate-400 mt-1.5">Override memindahkan tanggal mulai Sequence tanpa mengubah rencana awal di Kalender Tahunan. Tanggal selesai dihitung ulang otomatis dari durasi &amp; aturan hari kerja.</p>
+        </div>
+    </div>
 
     @if($batch->schedules->isEmpty())
     <div class="text-center py-16 text-slate-400">

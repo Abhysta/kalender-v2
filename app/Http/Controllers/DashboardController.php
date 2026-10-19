@@ -18,14 +18,14 @@ class DashboardController extends Controller
         $tQ = fn() => $user->applyOwnership(TrainingTemplate::query());
         $bQ = fn() => $user->applyOwnership(TrainingBatch::query());
 
-        $seminarConflicts = $this->conflictChecker->getSeminarConflicts();
-        $wiConflicts      = $this->conflictChecker->getWiConflicts();
+        $groupConflicts = $this->conflictChecker->getGroupConflicts();
+        $wiConflicts    = $this->conflictChecker->getWiConflicts();
 
         $stats = [
             'total'     => $tQ()->count(),
             'opened'    => $tQ()->where('is_active', true)->count(),
             'batches'   => $bQ()->count(),
-            'conflicts' => $seminarConflicts->count() + $wiConflicts->count(),
+            'conflicts' => $groupConflicts->count() + $wiConflicts->count(),
             'seats'     => (int) $bQ()->sum('participant_count'),
         ];
 

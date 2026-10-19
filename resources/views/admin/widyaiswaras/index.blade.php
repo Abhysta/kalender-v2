@@ -80,7 +80,7 @@
                                         class="h-7 px-2.5 bg-slate-50 border border-slate-200 rounded text-[11px] text-slate-500 font-semibold cursor-pointer hover:border-sky-300 hover:text-sky-600 transition-colors">
                                         Edit
                                     </button>
-                                    <form method="POST" action="{{ route('admin.widyaiswaras.destroy', $wi) }}" onsubmit="return confirm('Hapus widyaiswara {{ addslashes($wi->name) }}?')">
+                                    <form method="POST" action="{{ route('admin.widyaiswaras.destroy', $wi) }}" onsubmit="return confirmModal(event, 'Hapus widyaiswara {{ addslashes($wi->name) }}?', true)">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="h-7 px-2.5 bg-red-50 border border-red-200 rounded text-[11px] text-red-600 font-semibold cursor-pointer hover:bg-red-100 transition-colors">Hapus</button>
                                     </form>

@@ -46,14 +46,14 @@
     </div>
 
     <nav class="flex items-center gap-1" aria-label="Menu utama">
-        <a href="/catalog" class="nav-link active" aria-current="page">
+        <a href="{{ route('public.catalog') }}" class="nav-link active" aria-current="page">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                 <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
             <span class="max-[400px]:hidden">Katalog</span>
         </a>
-        <a href="/calendar" class="nav-link">
+        <a href="{{ route('public.calendar') }}" class="nav-link">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                 <line x1="16" y1="2" x2="16" y2="6"/>
@@ -64,7 +64,7 @@
         </a>
     </nav>
 
-    <a href="/" class="ml-auto inline-flex items-center gap-1.5 h-[34px] px-3.5 bg-sky-700 text-white rounded-lg text-[12px] font-semibold no-underline shrink-0 transition-all duration-150 hover:bg-sky-600 hover:shadow-[0_4px_12px_rgba(3,105,161,.3)]">
+    <a href="{{ route('login') }}" class="ml-auto inline-flex items-center gap-1.5 h-[34px] px-3.5 bg-sky-700 text-white rounded-lg text-[12px] font-semibold no-underline shrink-0 transition-all duration-150 hover:bg-sky-600 hover:shadow-[0_4px_12px_rgba(3,105,161,.3)]">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -139,6 +139,7 @@ import { animate, stagger, createTimeline } from 'https://esm.sh/animejs@4';
 
 // ── DATA (real DB) ────────────────────────────────────────────────────
 const trainings = {!! json_encode($trainings) !!};
+const calendarUrl = @json(route('public.calendar'));
 
 const CATEGORY_ICONS = {
     kepemimpinan: `<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
@@ -172,7 +173,7 @@ function renderCard(t) {
     };
     const st = statusMap[t.status];
 
-    const detailBtn = `<a href="/calendar?id=${t.id}" class="btn-daftar available"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>Detail</a>`;
+    const detailBtn = `<a href="${calendarUrl}?id=${t.id}" class="btn-daftar available"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>Detail</a>`;
     const btnMap = { open: detailBtn, full: detailBtn, waitlist: detailBtn };
 
     return `
