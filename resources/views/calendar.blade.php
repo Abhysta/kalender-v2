@@ -80,6 +80,15 @@
             </div>
             <div class="font-mono text-lg font-semibold text-slate-900 min-w-[200px] max-[768px]:text-[15px] max-[768px]:min-w-0 max-[480px]:text-[13px]" id="monthLabel"></div>
             <button class="h-[34px] px-3.5 border-[1.5px] border-slate-200 rounded-lg bg-white text-[13px] font-medium font-sans text-slate-700 cursor-pointer transition-all duration-150 hover:border-sky-700 hover:text-sky-700 hover:bg-sky-100 max-[480px]:hidden" id="todayBtn">Hari ini</button>
+            @if($units->isNotEmpty())
+            <select id="unitFilterSelect" aria-label="Filter unit organisasi"
+                class="select-custom h-[34px] pl-3 pr-8 border-[1.5px] border-slate-200 rounded-lg text-[13px] text-slate-700 bg-white cursor-pointer outline-none focus:border-sky-700 max-[480px]:hidden">
+                <option value="">Semua Unit</option>
+                @foreach($units as $unit)
+                <option value="{{ $unit->id }}">{{ $unit->name }}</option>
+                @endforeach
+            </select>
+            @endif
             <div class="ml-auto flex bg-slate-50 rounded-lg p-[3px] gap-0.5 max-[768px]:hidden">
                 <button class="h-7 px-3 border-none rounded-md text-xs font-medium font-sans cursor-pointer transition-all duration-[180ms] bg-white text-slate-900 shadow-[0_1px_4px_rgba(15,23,42,.1)]" data-view="month">Bulan</button>
             </div>
@@ -122,6 +131,7 @@ const trainings = {!! json_encode($trainings) !!};
 const params     = new URLSearchParams(location.search);
 const detailId   = params.get('id') ? parseInt(params.get('id')) : null;
 let   mode       = detailId ? 'detail' : 'all';           // 'all' | 'detail'
+let   unitFilter = null;                                   // null = semua unit
 let   visibleIds = new Set(detailId ? [detailId] : trainings.map(t => t.id));
 
 const today = new Date();
@@ -200,8 +210,10 @@ function buildSidebar() {
     } else {
         title.textContent = 'Semua Pelatihan';
 
+        const listed = unitFilter ? trainings.filter(t => t.unitId === unitFilter) : trainings;
+
         body.innerHTML = `<div class="training-list" id="trainingList">${
-            trainings.map(t => {
+            listed.map(t => {
                 const c     = CATEGORY_COLORS[t.category];
                 const isVis = visibleIds.has(t.id);
                 return `<div class="tl-item${isVis ? ' active' : ''}" data-id="${t.id}" role="button" tabindex="0" aria-pressed="${isVis}">
@@ -410,12 +422,29 @@ document.getElementById('viewToggle').addEventListener('click', e => {
         visibleIds = new Set([detailId]);
     } else {
         mode = 'all';
-        visibleIds = new Set(trainings.map(t => t.id));
+        visibleIds = new Set(
+            (unitFilter ? trainings.filter(t => t.unitId === unitFilter) : trainings).map(t => t.id)
+        );
     }
     buildSidebar();
     renderCalendar();
     animate(btn, { scale: [.94, 1], duration: 180, ease: 'outBack' });
 });
+
+// ── UNIT FILTER ───────────────────────────────────────────────────────
+const unitFilterSelect = document.getElementById('unitFilterSelect');
+if (unitFilterSelect) {
+    unitFilterSelect.addEventListener('change', () => {
+        unitFilter = unitFilterSelect.value ? parseInt(unitFilterSelect.value) : null;
+        mode = 'all';
+        document.querySelectorAll('.vt-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === 'all'));
+        visibleIds = new Set(
+            (unitFilter ? trainings.filter(t => t.unitId === unitFilter) : trainings).map(t => t.id)
+        );
+        buildSidebar();
+        renderCalendar();
+    });
+}
 
 // ── NAV ───────────────────────────────────────────────────────────────
 document.getElementById('prevBtn').addEventListener('click', () => {

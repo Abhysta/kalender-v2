@@ -201,6 +201,32 @@ class HybridConflictManagementTest extends TestCase
         $this->assertSame(1, ConflictAlert::where('status', 'resolved')->count());
     }
 
+    /**
+     * Regression: overriding batch B to overlap batch A must flag BOTH batches as
+     * conflicting immediately — not just the batch that was changed. Previously only
+     * the overridden batch's has_conflict_alert updated; the other side stayed stale
+     * until it was separately regenerated.
+     */
+    public function test_override_flags_the_other_conflicting_batch_too(): void
+    {
+        $t1 = $this->makeTemplate('SYMA');
+        $t2 = $this->makeTemplate('SYMB');
+        $batchA = $this->makeBatch($t1, '2027-03-01', 'Batch A');
+        $batchB = $this->makeBatch($t2, '2027-06-01', 'Batch B');
+
+        $generator = app(ScheduleGeneratorService::class);
+        $generator->generate($batchA);
+        $generator->generate($batchB);
+
+        $this->assertFalse($batchA->refresh()->has_conflict_alert);
+        $this->assertFalse($batchB->refresh()->has_conflict_alert);
+
+        app(AnnualCalendarService::class)->setOverride($batchB->refresh(), '2027-03-02');
+
+        $this->assertTrue($batchB->refresh()->has_conflict_alert);
+        $this->assertTrue($batchA->refresh()->has_conflict_alert, 'other batch should be flagged without needing a manual regenerate');
+    }
+
     /** 11. Dependency-based date recalculation keeps working (sequence/offset untouched by this feature). */
     public function test_dependency_recalculation_still_works(): void
     {

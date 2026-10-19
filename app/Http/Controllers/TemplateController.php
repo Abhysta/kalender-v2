@@ -75,8 +75,13 @@ class TemplateController extends Controller
             'is_active'              => ['boolean'],
         ]);
 
+        $user = Auth::user();
+        if (! $user->isSuperAdmin()) {
+            $data['organizational_unit_id'] = $user->organizational_unit_id;
+        }
+
         $data['is_active']  = $request->boolean('is_active');
-        $data['updated_by'] = Auth::id();
+        $data['updated_by'] = $user->id;
         $template->update($data);
 
         return redirect()->route('admin.templates.index')

@@ -63,6 +63,8 @@ class PublicController extends Controller
             ->map(fn($b) => $this->mapBatch($b))
             ->values();
 
-        return view('calendar', compact('trainings'));
+        $units = OrganizationalUnit::orderBy('name')->get();
+
+        return view('calendar', compact('trainings', 'units'));
     }
 }

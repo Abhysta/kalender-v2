@@ -25,12 +25,14 @@ class ConflictAlertService
      */
     public function evaluateBatch(TrainingBatch $batch): array
     {
-        $openKeys = [];
+        $openKeys         = [];
+        $affectedBatchIds = [];
 
         if ($this->ruleActive('group_overlap')) {
             foreach ($batch->schedules()->get()->filter(fn ($s) => $s->isGrouped()) as $s) {
                 foreach ($this->conflictChecker->getConflictingSchedules($s) as $other) {
-                    $openKeys[] = $this->upsertAlert('group_overlap', $s, $other);
+                    $openKeys[]         = $this->upsertAlert('group_overlap', $s, $other);
+                    $affectedBatchIds[] = $other->training_batch_id;
                 }
             }
         }
@@ -49,7 +51,8 @@ class ConflictAlertService
                         if (! $otherWi->schedule) {
                             continue;
                         }
-                        $openKeys[] = $this->upsertAlert('wi_overlap', $s, $otherWi->schedule, (string) $wi->widyaiswara_id);
+                        $openKeys[]         = $this->upsertAlert('wi_overlap', $s, $otherWi->schedule, (string) $wi->widyaiswara_id);
+                        $affectedBatchIds[] = $otherWi->schedule->training_batch_id;
                     }
                 }
             }
@@ -64,6 +67,19 @@ class ConflictAlertService
             })
             ->whereNotIn('dedup_key', $openKeys)
             ->update(['status' => 'resolved', 'resolved_at' => now()]);
+
+        // A conflict is symmetric — keep the OTHER batch's flag in sync too, so it shows
+        // up immediately whichever side an admin happens to look at, without requiring
+        // them to regenerate the batch that wasn't the one actually changed.
+        foreach (array_unique($affectedBatchIds) as $otherBatchId) {
+            if ($otherBatchId === $batch->id) {
+                continue;
+            }
+            $otherBatch = TrainingBatch::find($otherBatchId);
+            if ($otherBatch) {
+                $otherBatch->update(['has_conflict_alert' => $this->conflictChecker->hasAnyBatchConflict($otherBatch)]);
+            }
+        }
 
         return $openKeys
             ? ConflictAlert::whereIn('dedup_key', $openKeys)->get()->all()
